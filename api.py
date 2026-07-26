@@ -1,0 +1,702 @@
+# -*- coding: utf-8 -*-
+"""API, доступный из JS через window.pywebview.api.*
+
+Важно про имена: всё, что не начинается с подчёркивания, pywebview прокидывает
+в JavaScript. Поэтому окно, менеджеры ядра и колбэки живут под приватными
+именами — иначе мост лезет внутрь объекта окна и генерация API ломается.
+"""
+
+import os
+import json
+import time
+import queue
+import random
+import threading
+
+from parsing import parse_many, parse_subscription, fetch_subscription
+from xray_core import XrayManager, tcp_ping, find_xray, kill_orphans
+import win_proxy
+import storage
+import tun
+import tg_link
+
+# Эмодзи, которое подмигивает возле названия. Меняется раз в час.
+EMOJI_POOL = ["🧊", "❄️", "🐧", "🌊", "⚡", "🛡️", "🚀", "🌙", "✨", "🔒",
+              "🦈", "🐳", "🧭", "🎧", "🌌", "🔥", "🍀", "🎯", "💎", "🪐"]
+EMOJI_PERIOD = 3600           # секунд между сменами
+
+
+class Api:
+    def __init__(self):
+        self._window = None
+        self._on_speed_cb = None      # колбэк для трея (up_bps, down_bps)
+        self._on_quit_cb = None       # колбэк выхода из приложения
+        self.settings = storage.load_settings()
+        self.servers = storage.load_servers()
+        self.selected = 0 if self.servers else -1
+        self._xray = XrayManager()
+        self._tun = tun.TunManager()
+        self.connected = False
+        self._conflicts = []
+        self._save_error = ""
+        self._speed = (0, 0)
+        self._total = [0, 0]
+        self._last_hint = ""
+        self._stats_thread = None
+        self._stop_stats = threading.Event()
+
+        # Все вызовы в JS идут через одну очередь и один поток. Раньше логи ядра,
+        # статистика и пинги дёргали evaluate_js параллельно — WebView2 от этого
+        # намертво вставал, потому что каждый вызов ждёт ответа от UI-потока.
+        self._js_queue = queue.Queue(maxsize=500)
+        self._js_thread = threading.Thread(target=self._js_pump, daemon=True)
+        self._js_thread.start()
+
+        # локальный идентификатор профиля (создаётся один раз)
+        if not self.settings.get("local_id"):
+            self.settings["local_id"] = "LDK-" + "".join(
+                random.choice("0123456789ABCDEF") for _ in range(4))
+            self._save()
+        self._roll_emoji(force=False)
+        self._log_environment()
+
+        # поиск сторонних VPN не должен тормозить открытие окна
+        threading.Thread(target=self._scan_conflicts, daemon=True).start()
+        threading.Thread(target=self._cleanup_orphans, daemon=True).start()
+
+    def _cleanup_orphans(self):
+        killed = kill_orphans(find_xray(self.settings.get("xray_path", "")))
+        if killed:
+            storage.log("[env] снято зависших ядер от прошлого запуска: %d" % killed)
+
+    # ------------------------------------------------- окно и колбэки
+    def _attach(self, window, on_quit=None, on_speed=None):
+        """Вызывает main.py после создания окна."""
+        self._window = window
+        self._on_quit_cb = on_quit
+        self._on_speed_cb = on_speed
+
+    def _log_environment(self):
+        """Пишем в app.log, где именно приложение нашло ядро и туннель.
+
+        Когда у пользователя «не видит tun2socks», это первое, что нужно знать:
+        куда установлено приложение и что оно там нашло."""
+        storage.log("[env] папка приложения: %s" % storage.app_dir())
+        storage.log("[env] папка данных:     %s" % storage.data_dir())
+        storage.log("[env] xray:      %s" % (find_xray(self.settings.get("xray_path", ""))
+                                             or "НЕ НАЙДЕН"))
+        storage.log("[env] tun2socks: %s" % (tun.find_tun2socks() or "НЕ НАЙДЕН"))
+        storage.log("[env] права администратора: %s" % ("да" if tun.is_admin() else "нет"))
+
+    # ---------------------------------------------------- вспомогательное
+    def _save(self):
+        ok = storage.save_settings(self.settings)
+        self._save_error = "" if ok else storage.last_error()
+        return ok
+
+    def _save_servers(self):
+        ok = storage.save_servers(self.servers)
+        self._save_error = "" if ok else storage.last_error()
+        return ok
+
+    def _roll_emoji(self, force=False):
+        """Раз в час подбирает новое эмодзи возле названия."""
+        now = int(time.time())
+        ts = int(self.settings.get("emoji_ts", 0) or 0)
+        if force or not self.settings.get("emoji") or (now - ts) >= EMOJI_PERIOD:
+            pool = [e for e in EMOJI_POOL if e != self.settings.get("emoji")]
+            self.settings["emoji"] = random.choice(pool)
+            self.settings["emoji_ts"] = now
+            self._save()
+        return self.settings["emoji"]
+
+    # ---------------------------------------------------- сериализация
+    def _srv_json(self, s):
+        return {
+            "name": s.name or s.address,
+            "protocol": s.protocol,
+            "address": s.address,
+            "port": s.port,
+            "network": s.network,
+        }
+
+    def _sub_info(self):
+        """Лимиты и срок действия подписки — то, что панель прислала в заголовке.
+
+        total == 0 у провайдеров означает «безлимит», expire == 0 — «бессрочно»,
+        поэтому такие поля отдаём как None, а не как нули.
+        """
+        raw = self.settings.get("sub_info") or {}
+        used = int(raw.get("upload", 0) or 0) + int(raw.get("download", 0) or 0)
+        total = int(raw.get("total", 0) or 0)
+        expire = int(raw.get("expire", 0) or 0)
+        now = int(time.time())
+        return {
+            "known": bool(raw),
+            "title": raw.get("title", ""),
+            "announce": raw.get("announce", ""),
+            "support_url": raw.get("support_url", ""),
+            "used": used,
+            "total": total or None,
+            "left": max(0, total - used) if total else None,
+            "percent": min(100, round(used * 100.0 / total, 1)) if total else None,
+            "expire": expire or None,
+            "days_left": max(0, (expire - now) // 86400) if expire else None,
+            "expired": bool(expire and expire <= now),
+            "refill": raw.get("refill") or None,
+            "updated": int(self.settings.get("sub_updated", 0) or 0),
+            "url": self.settings.get("subscription_url", ""),
+        }
+
+    def _state(self):
+        return {
+            "servers": [self._srv_json(s) for s in self.servers],
+            "selected": self.selected,
+            "connected": self.connected,
+            "settings": self.settings,
+            "xray_found": bool(find_xray(self.settings.get("xray_path", ""))),
+            "tun_found": bool(tun.find_tun2socks()),
+            "is_admin": tun.is_admin(),
+            "tun_active": self._tun.is_running(),
+            "intro_done": bool(self.settings.get("intro_done", False)),
+            "local_id": self.settings.get("local_id", ""),
+            "rating": int(self.settings.get("rating", 0) or 0),
+            "emoji": self.settings.get("emoji", ""),
+            "conflicts": self._conflicts,
+            "sub": self._sub_info(),
+            "save_error": self._save_error,
+            "data_dir": storage.data_dir(),
+            "speed": {"up": self._speed[0], "down": self._speed[1],
+                      "total_up": self._total[0], "total_down": self._total[1]},
+        }
+
+    # ---------------------------------------------------- методы для JS
+    def get_state(self):
+        return self._state()
+
+    def tick_emoji(self):
+        """UI дёргает раз в минуту — эмодзи само сменится, когда придёт час."""
+        return {"emoji": self._roll_emoji()}
+
+    # ------------------------------------------------------------ серверы
+    def add_links(self, text):
+        parsed = parse_many(text or "")
+        if not parsed:
+            return {"added": 0, "state": self._state()}
+        self.servers.extend(parsed)
+        self._save_servers()
+        if self.selected < 0 and self.servers:
+            self.selected = 0
+        self._mark_onboarded()
+        return {"added": len(parsed), "state": self._state()}
+
+    def import_subscription(self, url):
+        url = (url or "").strip()
+        if not url:
+            return {"error": "empty_url"}
+        try:
+            content, info = fetch_subscription(url)
+            parsed = parse_subscription(content)
+        except Exception as e:
+            storage.log("[sub] ошибка загрузки: %s" % e)
+            return {"error": str(e)}
+        if not parsed:
+            return {"error": "empty_sub"}
+        self.servers = parsed
+        self.selected = 0
+        self.settings["subscription_url"] = url
+        self.settings["sub_info"] = info or {}
+        self.settings["sub_updated"] = int(time.time())
+        self._save_servers()
+        self._mark_onboarded()
+        storage.log("[sub] загружено серверов: %d" % len(parsed))
+        return {"added": len(parsed), "state": self._state()}
+
+    def refresh_subscription(self):
+        """Перечитать сохранённую подписку — серверы у провайдера меняются."""
+        url = (self.settings.get("subscription_url") or "").strip()
+        if not url:
+            return {"error": "empty_url"}
+        return self.import_subscription(url)
+
+    def delete_server(self, index):
+        if 0 <= index < len(self.servers):
+            del self.servers[index]
+            self._save_servers()
+            if self.selected >= len(self.servers):
+                self.selected = len(self.servers) - 1
+        return self._state()
+
+    def select_server(self, index):
+        if 0 <= index < len(self.servers):
+            self.selected = index
+        return self._state()
+
+    def ping_all(self):
+        targets = [(i, s.address, s.port) for i, s in enumerate(self.servers)]
+        threading.Thread(target=self._ping_worker, args=(targets,), daemon=True).start()
+        return {"ok": True}
+
+    def _ping_worker(self, targets):
+        """Пингуем пачками: сотня одновременных потоков только мешает друг другу."""
+        lock = threading.Semaphore(12)
+
+        def one(index, host, port):
+            with lock:
+                ms = tcp_ping(host, port)
+            self._push("window.__pushPing(%d,%d)" % (index, ms))
+
+        threads = [threading.Thread(target=one, args=t, daemon=True) for t in targets]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    # ------------------------------------------------------------ соединение
+    def connect(self, index):
+        if not (0 <= index < len(self.servers)):
+            return {"error": "no_server"}
+        want_tun = bool(self.settings.get("tun_mode", False))
+        if want_tun and not tun.is_admin():
+            return {"error": "need_admin"}
+
+        self.selected = index
+        srv = self.servers[index]
+        sp = int(self.settings.get("socks_port", 10808))
+        hp = int(self.settings.get("http_port", 10809))
+        try:
+            exe = self._xray.start(
+                srv, sp, hp, self.settings.get("xray_path", ""),
+                on_log=self._log,
+                mode=self.settings.get("route_mode", "global"),
+                direct_entries=self.settings.get("direct_sites", []),
+                block_entries=self.settings.get("block_sites", []),
+                high_priority=bool(self.settings.get("high_priority", False)),
+            )
+            self._log("[core] запущено ядро: %s" % exe)
+            self._log("[core] сервер: %s (%s, %s)" % (srv.name, srv.protocol, srv.network))
+        except Exception as e:
+            self._log("[error] %s" % e)
+            return {"error": str(e)}
+
+        if self.settings.get("system_proxy", True):
+            ok, err = win_proxy.set_proxy("127.0.0.1:%d" % hp)
+            self._log("[proxy] системный прокси -> 127.0.0.1:%d" % hp if ok
+                      else "[proxy] ошибка: %s" % err)
+
+        if want_tun:
+            try:
+                self._tun.start(sp, srv.address,
+                                dns=self.settings.get("tun_dns", "1.1.1.1"),
+                                on_log=self._log)
+            except Exception as e:
+                self._log("[tun] ошибка: %s" % e)
+                self._xray.stop()
+                if self.settings.get("system_proxy", True):
+                    win_proxy.disable_proxy()
+                return {"error": str(e)}
+
+        self.connected = True
+        self._start_stats()
+        return {"ok": True, "state": self._state()}
+
+    def disconnect(self):
+        self._stop_stats_loop()
+        self._tun.stop()
+        self._xray.stop()
+        if self.settings.get("system_proxy", True):
+            win_proxy.disable_proxy()
+        self.connected = False
+        self._speed = (0, 0)
+        self._push_speed(0, 0)
+        self._log("[core] отключено")
+        return {"ok": True, "state": self._state()}
+
+    # ------------------------------------------------------------ режимы
+    def set_modes(self, patch):
+        """Тумблеры «Прокси» и «Туннель» на главном экране.
+
+        Переключаются на лету: если соединение уже поднято, применяем сразу,
+        не разрывая его.
+        """
+        patch = patch or {}
+        want_proxy = bool(patch.get("proxy", self.settings.get("system_proxy", True)))
+        want_tun = bool(patch.get("tun", self.settings.get("tun_mode", False)))
+
+        if want_tun and not tun.is_admin():
+            return {"error": "need_admin", "state": self._state()}
+        if want_tun and not tun.find_tun2socks():
+            return {"error": "no_tun2socks", "state": self._state()}
+
+        was_proxy = bool(self.settings.get("system_proxy", True))
+        was_tun = bool(self.settings.get("tun_mode", False))
+        self.settings["system_proxy"] = want_proxy
+        self.settings["tun_mode"] = want_tun
+        self._save()
+
+        if self.connected:
+            hp = int(self.settings.get("http_port", 10809))
+            sp = int(self.settings.get("socks_port", 10808))
+            if want_proxy and not was_proxy:
+                win_proxy.set_proxy("127.0.0.1:%d" % hp)
+                self._log("[proxy] системный прокси включён")
+            elif not want_proxy and was_proxy:
+                win_proxy.disable_proxy()
+                self._log("[proxy] системный прокси выключен")
+
+            if want_tun and not was_tun:
+                try:
+                    srv = self.servers[self.selected]
+                    self._tun.start(sp, srv.address,
+                                    dns=self.settings.get("tun_dns", "1.1.1.1"),
+                                    on_log=self._log)
+                except Exception as e:
+                    self.settings["tun_mode"] = False
+                    self._save()
+                    self._log("[tun] ошибка: %s" % e)
+                    return {"error": str(e), "state": self._state()}
+            elif not want_tun and was_tun:
+                self._tun.stop()
+                self._log("[tun] туннель выключен")
+
+        return {"ok": True, "state": self._state()}
+
+    def request_admin(self):
+        """Перезапуск с правами администратора (нужно для туннеля)."""
+        if tun.is_admin():
+            return {"ok": True, "already": True}
+        if not tun.relaunch_as_admin():
+            return {"error": "denied"}
+        threading.Timer(0.4, self._quit).start()
+        return {"ok": True}
+
+    def _quit(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
+        if self._on_quit_cb:
+            try:
+                self._on_quit_cb()
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------ маршруты
+    def get_routing(self):
+        return {
+            "mode": self.settings.get("route_mode", "global"),
+            "direct": self.settings.get("direct_sites", []),
+            "block": self.settings.get("block_sites", []),
+        }
+
+    def save_routing(self, patch):
+        """Режим маршрутизации и списки исключений.
+
+        Списки принимаем текстом (по строке на правило) или массивом.
+        """
+        patch = patch or {}
+        mode = patch.get("mode", self.settings.get("route_mode", "global"))
+        if mode not in ("global", "rules", "direct"):
+            mode = "global"
+        self.settings["route_mode"] = mode
+        self.settings["direct_sites"] = self._as_list(patch.get("direct"))
+        self.settings["block_sites"] = self._as_list(patch.get("block"))
+        self._save()
+        # правила живут в конфиге ядра — на лету применяем перезапуском Xray
+        restarted = False
+        if self.connected and self.selected >= 0:
+            restarted = self._restart_core()
+        return {"ok": True, "restarted": restarted, "state": self._state()}
+
+    @staticmethod
+    def _as_list(value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = value.replace(",", "\n").split("\n")
+        out, seen = [], set()
+        for item in value:
+            item = str(item).strip()
+            if item and item.lower() not in seen:
+                seen.add(item.lower())
+                out.append(item)
+        return out
+
+    def _restart_core(self):
+        """Перезапуск ядра с новым конфигом, туннель при этом не роняем."""
+        try:
+            srv = self.servers[self.selected]
+            self._xray.start(
+                srv,
+                int(self.settings.get("socks_port", 10808)),
+                int(self.settings.get("http_port", 10809)),
+                self.settings.get("xray_path", ""),
+                on_log=self._log,
+                mode=self.settings.get("route_mode", "global"),
+                direct_entries=self.settings.get("direct_sites", []),
+                block_entries=self.settings.get("block_sites", []),
+                high_priority=bool(self.settings.get("high_priority", False)),
+            )
+            self._log("[core] правила маршрутизации применены")
+            return True
+        except Exception as e:
+            self._log("[error] %s" % e)
+            return False
+
+    # ------------------------------------------------------------ Telegram
+    def link_telegram(self, username):
+        """Привязать аккаунт: тянем имя и аватарку с публичной страницы t.me."""
+        res = tg_link.fetch_profile(username or "")
+        if res.get("error"):
+            return {"error": res["error"]}
+        self.settings["tg_username"] = res["username"]
+        self.settings["tg_name"] = res["name"]
+        self.settings["tg_avatar"] = res.get("avatar", "")
+        self._save()
+        return {"ok": True, "state": self._state()}
+
+    def unlink_telegram(self):
+        self.settings["tg_username"] = ""
+        self.settings["tg_name"] = ""
+        self.settings["tg_avatar"] = ""
+        self._save()
+        return {"ok": True, "state": self._state()}
+
+    # ------------------------------------------------------------ статистика
+    def _start_stats(self):
+        self._stop_stats.clear()
+        if self._stats_thread and self._stats_thread.is_alive():
+            return
+        self._stats_thread = threading.Thread(target=self._stats_loop, daemon=True)
+        self._stats_thread.start()
+
+    def _stop_stats_loop(self):
+        self._stop_stats.set()
+        self._total = [0, 0]
+
+    def _stats_loop(self):
+        # первый опрос сбрасывает накопленное за время старта ядра
+        self._xray.traffic()
+        while not self._stop_stats.wait(1.0):
+            if not self.connected:
+                break
+            up, down = self._xray.traffic()
+            self._total[0] += up
+            self._total[1] += down
+            self._speed = (up, down)
+            self._push_speed(up, down)
+        self._speed = (0, 0)
+
+    def _push_speed(self, up, down):
+        self._push("window.__pushSpeed(%d,%d,%d,%d)"
+                   % (up, down, self._total[0], self._total[1]))
+        if self._on_speed_cb:
+            try:
+                self._on_speed_cb(up, down)
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------ настройки
+    def save_settings(self, patch):
+        patch = patch or {}
+        cur = self.settings
+        for key, default in (("socks_port", 10808), ("http_port", 10809)):
+            try:
+                cur[key] = int(patch.get(key, cur.get(key, default)))
+            except Exception:
+                pass
+        cur["system_proxy"] = bool(patch.get("system_proxy", cur.get("system_proxy", True)))
+        cur["xray_path"] = str(patch.get("xray_path", cur.get("xray_path", ""))).strip()
+        cur["theme"] = patch.get("theme", cur.get("theme", "auto"))
+        cur["lang"] = patch.get("lang", cur.get("lang", "ru"))
+        cur["tun_dns"] = str(patch.get("tun_dns", cur.get("tun_dns", "1.1.1.1"))).strip()
+        for key, default in (("minimize_to_tray", True), ("start_minimized", False),
+                             ("high_priority", False)):
+            cur[key] = bool(patch.get(key, cur.get(key, default)))
+
+        ok = self._save()
+        if ok and "high_priority" in patch:
+            apply_priority(bool(cur["high_priority"]))
+        state = self._state()
+        state["saved"] = ok
+        return state
+
+    def check_conflicts(self):
+        return {"conflicts": self._conflicts}
+
+    # Только процессы, которые реально гоняют трафик. Фоновые службы-помощники
+    # (clash-verge-service и подобные) сюда не входят: они висят в системе всегда,
+    # даже когда сам клиент закрыт, и раньше из-за них баннер не гас никогда.
+    CONFLICT_PROCESSES = {
+        "happ.exe": "Happ", "nekoray.exe": "NekoRay", "nekobox.exe": "NekoBox",
+        "v2rayn.exe": "v2rayN", "v2rayw.exe": "v2rayW", "v2ray.exe": "V2Ray",
+        "clash.exe": "Clash", "clash-verge.exe": "Clash Verge",
+        "clashx.exe": "ClashX", "clash party.exe": "Clash Party",
+        "clash-party.exe": "Clash Party", "verge-mihomo.exe": "Clash Verge",
+        "mihomo.exe": "Clash / Mihomo", "mihomo-alpha.exe": "Clash / Mihomo",
+        "hiddify.exe": "Hiddify", "hiddifynext.exe": "Hiddify",
+        "sing-box.exe": "sing-box", "singbox.exe": "sing-box",
+        "hysteria.exe": "Hysteria", "wireguard.exe": "WireGuard",
+        "openvpn.exe": "OpenVPN", "openvpn-gui.exe": "OpenVPN",
+        "amneziavpn.exe": "AmneziaVPN", "outline.exe": "Outline",
+        "furiousgfw.exe": "Furious", "throne.exe": "Throne",
+        "invisibleman-xray.exe": "InvisibleMan",
+    }
+
+    def _scan_conflicts(self):
+        """Следит за сторонними VPN-клиентами, пока приложение работает.
+
+        Проверка повторяется: пользователь закрывает чужой клиент и ждёт, что
+        предупреждение исчезнет само, а не после перезапуска приложения.
+        """
+        import subprocess
+        while True:
+            found = set()
+            try:
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                out = subprocess.check_output(
+                    ["tasklist", "/fo", "csv", "/nh"],
+                    startupinfo=si, creationflags=0x08000000,
+                    text=True, errors="ignore", timeout=8,
+                )
+                low = out.lower()
+                for exe, label in self.CONFLICT_PROCESSES.items():
+                    if '"%s"' % exe in low:
+                        found.add(label)
+            except Exception:
+                pass
+
+            found = sorted(found)
+            if found != self._conflicts:
+                self._conflicts = found
+                self._push("window.__pushConflicts(%s)" % json.dumps(found))
+            time.sleep(15)
+
+    def open_external(self, url):
+        """Открыть ссылку во ВНЕШНЕМ браузере (не внутри окна приложения)."""
+        import webbrowser
+        url = (url or "").strip()
+        if not url:
+            return {"ok": False}
+        try:
+            webbrowser.open(url, new=2)
+        except Exception:
+            try:
+                os.startfile(url)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        return {"ok": True}
+
+    def open_data_folder(self):
+        """Показать папку с настройками и логом — для разбора проблем."""
+        try:
+            os.startfile(storage.data_dir())  # type: ignore[attr-defined]
+            return {"ok": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def finish_intro(self):
+        """Отметить, что приветственный экран пройден (показываем только раз)."""
+        self.settings["intro_done"] = True
+        self._save()
+        return self._state()
+
+    def _mark_onboarded(self):
+        """Появились серверы — знакомство закончено, окна больше не нужны."""
+        if not self.settings.get("intro_done"):
+            self.settings["intro_done"] = True
+        self._save()
+
+    def set_rating(self, n):
+        """Сохранить пользовательскую оценку приложения (0..5)."""
+        try:
+            n = max(0, min(5, int(n)))
+        except Exception:
+            n = 0
+        self.settings["rating"] = n
+        self._save()
+        return self._state()
+
+    def shutdown(self):
+        try:
+            self._stop_stats_loop()
+            self._tun.stop()
+            self._xray.stop()
+            if self.settings.get("system_proxy", True):
+                win_proxy.disable_proxy()
+        except Exception:
+            pass
+
+    # ---------------------------------------------------- push в JS
+    # Построчный вывод ядра идёт в окно, но в файл попадает не весь: при активном
+    # сёрфинге Xray пишет строку на каждое соединение, и app.log распухал бы до
+    # десятков мегабайт за вечер. В файл — только то, что пригодится для разбора.
+    # Xray пишет «accepted ...», tun2socks — JSON вида {"level":"info", ...};
+    # и то и другое появляется на каждое соединение.
+    _NOISE = ("accepted", "[info]", '"level":"info"', '"level":"debug"',
+              "tunneling request")
+
+    # Ядро пишет об этом по-английски и невнятно, а причина почти всегда одна:
+    # трафик перехватывает другой VPN, поднявший TUN-адаптер.
+    _HINTS = (
+        ("received real certificate",
+         "[!] Соединение с сервером перехватывает другая программа. "
+         "Почти всегда это сторонний VPN с включённым режимом туннеля — "
+         "закройте его полностью и попробуйте снова."),
+        ("failed to listen tcp",
+         "[!] Порт занят другой программой. Смените порты в настройках "
+         "или закройте программу, которая их держит."),
+    )
+
+    def _log(self, line):
+        line = str(line)
+        low = line.lower()
+        if not any(n in low for n in self._NOISE):
+            storage.log(line)
+        self._push("window.__pushLog(%s)" % json.dumps(line))
+
+        for needle, hint in self._HINTS:
+            if needle in low and hint != self._last_hint:
+                self._last_hint = hint
+                storage.log(hint)
+                self._push("window.__pushLog(%s)" % json.dumps(hint))
+                self._push("window.__pushHint(%s)" % json.dumps(hint))
+                break
+
+    def _push(self, js):
+        """Ставит вызов в очередь. Никогда не блокирует вызывающий поток."""
+        try:
+            self._js_queue.put_nowait(js)
+        except queue.Full:
+            pass          # UI не успевает — лучше потерять строку лога, чем встать
+
+    def _js_pump(self):
+        """Единственный поток, которому позволено дёргать evaluate_js."""
+        while True:
+            js = self._js_queue.get()
+            window = self._window
+            if window is None:
+                continue
+            try:
+                window.evaluate_js(js)
+            except Exception:
+                pass
+
+
+def apply_priority(high: bool) -> bool:
+    """Переключает класс приоритета своего процесса.
+
+    «Выше обычного» вместо «высокого»: реального выигрыша столько же, но
+    приложение не начинает конкурировать с системными службами.
+    """
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        ABOVE_NORMAL, NORMAL = 0x00008000, 0x00000020
+        handle = ctypes.windll.kernel32.GetCurrentProcess()
+        return bool(ctypes.windll.kernel32.SetPriorityClass(
+            handle, ABOVE_NORMAL if high else NORMAL))
+    except Exception:
+        return False

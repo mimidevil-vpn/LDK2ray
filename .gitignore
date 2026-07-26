@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- PyInstaller / сборка ---
+build/
+dist/
+releases/
+installer/Output/
+*.manifest
+
+# --- Бинарники ядра (кладутся в Release, не в репозиторий) ---
+xray.exe
+tun2socks.exe
+wintun.dll
+geoip.dat
+geosite.dat
+
+# --- Пользовательские данные и конфиги ---
+data/
+*.log
+
+# --- Прочее ---
+.claude/
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+$null

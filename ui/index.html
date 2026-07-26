@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LEDOKOL HUB</title>
+<style>
+/* ==================================================================
+   LEDOKOL HUB · Ledokol VPN
+   Монохром (чёрное/белое), стиль nextgram.pro. Шрифт SF Pro («SDSans»).
+   Оптимизировано: backdrop-filter только на иконках и верхних панелях,
+   без бесконечных анимаций за стеклом — чтобы не грузить память/GPU.
+   ================================================================== */
+
+:root{
+  --bg:#050505; --bg-2:#0d0d0e;
+  --text:#ffffff; --muted:#8a8a8e;
+  --surface:rgba(255,255,255,.06);
+  --surface-2:rgba(255,255,255,.11);
+  --border:rgba(255,255,255,.12);
+  --border-strong:rgba(255,255,255,.22);
+  --field:rgba(255,255,255,.05);
+  --btn-bg:#ffffff; --btn-fg:#050505;
+  --specular:rgba(255,255,255,.30);
+  --sheen:rgba(255,255,255,.14);
+  --halo:rgba(255,255,255,.10);
+  --shadow:0 24px 60px rgba(0,0,0,.5);
+  --shadow-sm:0 12px 32px rgba(0,0,0,.4);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --radius:26px; --radius-sm:18px; --pill:999px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f4f2; --bg-2:#eceae6;
+    --text:#101011; --muted:#747477;
+    --surface:rgba(255,255,255,.7); --surface-2:rgba(255,255,255,.9);
+    --border:rgba(0,0,0,.10); --border-strong:rgba(0,0,0,.16);
+    --field:rgba(0,0,0,.045);
+    --btn-bg:#050505; --btn-fg:#ffffff;
+    --specular:rgba(255,255,255,.95); --sheen:rgba(255,255,255,.6);
+    --halo:rgba(0,0,0,.05);
+    --shadow:0 24px 55px rgba(30,30,35,.12); --shadow-sm:0 14px 34px rgba(30,30,35,.1);
+    color-scheme:light;
+  }
+}
+body.theme-dark{
+  --bg:#050505; --bg-2:#0d0d0e; --text:#ffffff; --muted:#8a8a8e;
+  --surface:rgba(255,255,255,.06); --surface-2:rgba(255,255,255,.11);
+  --border:rgba(255,255,255,.12); --border-strong:rgba(255,255,255,.22);
+  --field:rgba(255,255,255,.05); --btn-bg:#ffffff; --btn-fg:#050505;
+  --specular:rgba(255,255,255,.30); --sheen:rgba(255,255,255,.14); --halo:rgba(255,255,255,.10);
+  --shadow:0 24px 60px rgba(0,0,0,.5); --shadow-sm:0 12px 32px rgba(0,0,0,.4); color-scheme:dark;
+}
+body.theme-light{
+  --bg:#f4f4f2; --bg-2:#eceae6; --text:#101011; --muted:#747477;
+  --surface:rgba(255,255,255,.7); --surface-2:rgba(255,255,255,.9);
+  --border:rgba(0,0,0,.10); --border-strong:rgba(0,0,0,.16);
+  --field:rgba(0,0,0,.045); --btn-bg:#050505; --btn-fg:#ffffff;
+  --specular:rgba(255,255,255,.95); --sheen:rgba(255,255,255,.6); --halo:rgba(0,0,0,.05);
+  --shadow:0 24px 55px rgba(30,30,35,.12); --shadow-sm:0 14px 34px rgba(30,30,35,.1); color-scheme:light;
+}
+
+*{box-sizing:border-box; -webkit-user-select:none; user-select:none;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:"SF Pro Display","SF Pro Text","SDSans","Segoe UI Variable Display",
+    "Segoe UI",-apple-system,BlinkMacSystemFont,"Helvetica Neue",system-ui,sans-serif;
+  font-feature-settings:"ss01" 1,"cv01" 1;
+  color:var(--text); background:var(--bg); overflow:hidden;
+  transition:background .45s var(--ease),color .35s var(--ease);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+/* статичные монохромные ореолы (без анимации — экономим GPU) */
+body::before{
+  content:''; position:fixed; inset:-30% -15% auto -15%; height:80vh; z-index:0;
+  background:
+    radial-gradient(48% 52% at 22% 6%,var(--halo),transparent 60%),
+    radial-gradient(42% 48% at 82% 12%,var(--halo),transparent 58%);
+  pointer-events:none; opacity:.85;
+}
+
+/* верхние стеклянные панели (их немного — можно позволить blur) */
+.glass{
+  position:relative; background:var(--surface);
+  backdrop-filter:blur(16px) saturate(130%); -webkit-backdrop-filter:blur(16px) saturate(130%);
+  border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow), inset 0 1px 0 var(--specular);
+}
+.glass::after{
+  content:''; position:absolute; left:16px; right:16px; top:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--sheen),transparent);
+  pointer-events:none; opacity:.6;
+}
+
+/* ==================== КОМПОНОВКА ==================== */
+.app{
+  position:relative; z-index:1; height:100vh; padding:16px 22px 20px;
+  display:flex; flex-direction:column; gap:12px; max-width:1120px; margin:0 auto;
+  opacity:0; transform:translateY(8px);
+  transition:opacity .8s var(--ease),transform .8s var(--ease);
+}
+.app.go{opacity:1; transform:none;}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.rise{opacity:0; animation:rise .85s var(--ease) forwards; animation-play-state:paused;}
+.app.go .rise{animation-play-state:running;}
+.d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}
+.d4{animation-delay:.32s}.d5{animation-delay:.41s}
+
+/* ==================== ВЕРХНЯЯ ПАНЕЛЬ ==================== */
+.topbar{display:flex; align-items:center; justify-content:space-between; padding:12px 18px;}
+.brand{display:flex; align-items:center; gap:12px; font-size:19px; font-weight:750; letter-spacing:-.02em;}
+.logo-mark{width:34px; height:34px; flex:none; border-radius:10px;}
+.logo-text{display:flex; align-items:center; gap:8px;}
+#brandEmoji{font-size:17px; line-height:1; display:inline-block;}
+#brandEmoji.pop{animation:emojiPop .8s var(--ease);}
+@keyframes emojiPop{0%{transform:scale(.2) rotate(-25deg);opacity:0}60%{transform:scale(1.25) rotate(8deg)}100%{transform:none;opacity:1}}
+.top-actions{display:flex; align-items:center; gap:10px;}
+.lang-toggle{display:flex; background:var(--field); border:1px solid var(--border);
+  border-radius:var(--pill); padding:3px; gap:2px;}
+.lang-toggle button{border:0; background:transparent; color:var(--muted); font-weight:650; font-size:12.5px;
+  padding:6px 13px; border-radius:var(--pill); cursor:pointer; transition:.3s var(--ease);}
+.lang-toggle button.active{background:var(--text); color:var(--bg); box-shadow:0 4px 16px rgba(0,0,0,.22);}
+.icon-btn{width:42px; height:42px; display:grid; place-items:center; cursor:pointer;
+  background:var(--field); border:1px solid var(--border); border-radius:14px; color:var(--text);
+  transition:.3s var(--ease); box-shadow:inset 0 1px 0 var(--specular);}
+.icon-btn:hover{transform:translateY(-1px); border-color:var(--border-strong);}
+.icon-btn svg{width:19px; height:19px;}
+
+/* ==================== HERO ==================== */
+.hero{display:flex; align-items:center; justify-content:space-between; padding:20px 28px; gap:20px;}
+.hero-left{display:flex; align-items:center; gap:18px; min-width:0;}
+.status-dot{width:15px; height:15px; border-radius:50%; flex:none;
+  border:2px solid var(--muted); background:transparent; transition:.4s var(--ease);}
+.status-dot.on{background:var(--text); border-color:var(--text);
+  box-shadow:0 0 0 4px var(--halo),0 0 22px 2px var(--halo);}
+.status-dot.wait{border-color:var(--text); animation:pulse 1.1s ease-in-out infinite;}
+@keyframes pulse{50%{opacity:.35}}
+.status-title{font-size:26px; font-weight:750; letter-spacing:-.025em; line-height:1.1;}
+.status-sub{color:var(--muted); font-size:13.5px; margin-top:4px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:38vw;}
+.hero-right{display:flex; align-items:center; gap:18px; flex:none;}
+.speed{display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:700;
+  font-variant-numeric:tabular-nums; min-width:104px;}
+.speed span{display:flex; align-items:center; gap:7px; color:var(--muted); transition:color .3s var(--ease);}
+.speed span b{font-weight:700; color:var(--text); font-size:13.5px;}
+.speed.live span{color:var(--text);}
+.connect-btn{position:relative; overflow:hidden; border:0; cursor:pointer; color:var(--btn-fg);
+  font-size:16px; font-weight:700; letter-spacing:.01em; padding:0 34px; height:58px; min-width:186px;
+  border-radius:var(--pill); background:var(--btn-bg);
+  box-shadow:0 14px 36px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.35);
+  transition:.28s var(--ease); flex:none;}
+.connect-btn:hover{transform:translateY(-2px); box-shadow:0 20px 46px rgba(0,0,0,.32);}
+.connect-btn:active{transform:translateY(0);}
+.connect-btn.connecting{background:var(--surface-2); color:var(--text); border:1px solid var(--border);
+  animation:pulse 1.1s ease-in-out infinite; pointer-events:none;}
+.connect-btn.connected{background:transparent; color:var(--text); border:1px solid var(--border-strong);
+  box-shadow:inset 0 1px 0 var(--specular);}
+
+/* ==================== ПЛИТКИ РЕЖИМОВ ==================== */
+.modes{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.mode-tile{position:relative; overflow:hidden; display:flex; flex-direction:column; gap:10px;
+  padding:15px 17px; border-radius:var(--radius); text-align:left; cursor:pointer;
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+  box-shadow:inset 0 1px 0 var(--specular); transition:.28s var(--ease); font-family:inherit;}
+.mode-tile:hover{transform:translateY(-2px); border-color:var(--border-strong);}
+.mode-tile.on{border-color:var(--text); box-shadow:0 0 0 1px var(--text), inset 0 1px 0 var(--specular);}
+.mode-tile.locked{opacity:.55;}
+.mode-tile.failed .m-sub{color:var(--text); font-weight:650;}
+.mode-tile.failed .m-ic{border-color:var(--border-strong);}
+.m-top{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.m-ic{width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex:none;
+  background:var(--field); border:1px solid var(--border); box-shadow:inset 0 1px 0 var(--specular);}
+.m-ic svg{width:19px; height:19px; fill:none; stroke:var(--text); stroke-width:1.7;
+  stroke-linecap:round; stroke-linejoin:round;}
+.m-name{font-size:15px; font-weight:700; letter-spacing:-.01em;}
+.m-sub{font-size:12px; color:var(--muted); line-height:1.35;}
+/* компактный переключатель внутри плитки */
+.sw{width:44px; height:26px; border-radius:var(--pill); flex:none; position:relative;
+  background:var(--field); border:1px solid var(--border); transition:.32s var(--ease);}
+.sw::after{content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%;
+  background:var(--text); transition:.32s var(--ease); box-shadow:0 3px 10px rgba(0,0,0,.35);}
+.mode-tile.on .sw{background:var(--text); border-color:var(--text);}
+.mode-tile.on .sw::after{transform:translateX(18px); background:var(--bg);}
+
+/* ==================== БАННЕРЫ ==================== */
+.banner{display:flex; align-items:center; gap:14px; padding:13px 18px; border-radius:var(--radius-sm);
+  border:1px solid var(--border-strong); background:var(--surface-2);}
+.banner[hidden]{display:none;}
+.banner-ic{flex:none; width:34px; height:34px; display:grid; place-items:center; border-radius:10px;
+  background:var(--field); border:1px solid var(--border);}
+.banner-ic svg{width:19px; height:19px;}
+.banner-tx{flex:1; min-width:0; font-size:13.5px; line-height:1.4;}
+.banner-tx b{display:block; font-weight:700;}
+.banner-tx span{color:var(--muted);}
+.banner-x{flex:none; width:30px; height:30px; border:0; background:transparent; color:var(--muted);
+  cursor:pointer; border-radius:9px; font-size:15px; transition:.2s var(--ease);}
+.banner-x:hover{background:var(--text); color:var(--bg);}
+.banner-btn{flex:none; border:0; cursor:pointer; background:var(--btn-bg); color:var(--btn-fg);
+  font-weight:700; font-size:12.5px; padding:9px 16px; border-radius:var(--pill);
+  font-family:inherit; transition:.25s var(--ease);}
+.banner-btn:hover{transform:translateY(-1px);}
+
+/* ==================== БЫСТРЫЕ ССЫЛКИ ==================== */
+.quick-links{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.qlink{position:relative; overflow:hidden; display:flex; align-items:center; gap:14px; cursor:pointer;
+  padding:14px 18px; border-radius:var(--radius); text-align:left;
+  background:var(--surface-2); border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 var(--specular); color:var(--text); transition:.28s var(--ease);}
+.qlink:hover{transform:translateY(-2px); border-color:var(--border-strong);}
+.q-ic{width:38px; height:38px; border-radius:12px; flex:none; display:grid; place-items:center;
+  background:var(--field); border:1px solid var(--border); box-shadow:inset 0 1px 0 var(--specular);}
+.q-ic svg{width:19px; height:19px; fill:var(--text);}
+.q-tx{display:flex; flex-direction:column; min-width:0; flex:1;}
+.q-tx b{font-size:14.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.q-tx i{font-style:normal; font-size:12.5px; color:var(--muted); margin-top:1px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.q-arrow{color:var(--muted); font-size:18px; flex:none; transition:.3s var(--ease);}
+.qlink:hover .q-arrow{transform:translateX(3px); color:var(--text);}
+
+/* ==================== ТАБЫ ==================== */
+.tabs{display:flex; align-items:center; gap:5px; padding:7px 8px;}
+.tab{position:relative; overflow:hidden; border:0; background:transparent; color:var(--muted);
+  font-weight:650; font-size:13.5px; padding:10px 15px; border-radius:14px; cursor:pointer;
+  transition:.3s var(--ease); font-family:inherit;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--surface-2); color:var(--text);
+  box-shadow:inset 0 0 0 1px var(--border), inset 0 1px 0 var(--specular);}
+.tabs .spacer{flex:1;}
+.ping-btn{position:relative; overflow:hidden; border:1px solid var(--border); background:var(--field); color:var(--text);
+  font-weight:650; font-size:13px; padding:9px 16px; border-radius:var(--pill); cursor:pointer;
+  transition:.3s var(--ease); box-shadow:inset 0 1px 0 var(--specular); font-family:inherit;}
+.ping-btn:hover{border-color:var(--border-strong); transform:translateY(-1px);}
+
+/* ==================== КОНТЕНТ (жидкий переход) ==================== */
+.content{flex:1; min-height:0; position:relative;}
+.panel{position:absolute; inset:0; display:none; overflow-y:auto; padding:2px;}
+.panel.active{display:block; animation:panelIn .5s var(--ease);}
+@keyframes panelIn{
+  from{opacity:0; transform:translateY(14px) scale(.99); filter:blur(6px);}
+  to{opacity:1; transform:none; filter:blur(0);}
+}
+.panel::-webkit-scrollbar{width:9px;}
+.panel::-webkit-scrollbar-thumb{background:var(--border); border-radius:8px;}
+.panel::-webkit-scrollbar-thumb:hover{background:var(--border-strong);}
+
+/* список серверов */
+.server-list{display:flex; flex-direction:column; gap:10px;}
+.server-card{position:relative; overflow:hidden; display:flex; align-items:center; gap:16px; padding:15px 18px;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
+  cursor:pointer; transition:.24s var(--ease); box-shadow:inset 0 1px 0 var(--specular);}
+.server-card:hover{transform:translateY(-2px); border-color:var(--border-strong);}
+.server-card.sel{border-color:var(--text);
+  box-shadow:0 0 0 1px var(--text), inset 0 1px 0 var(--specular), var(--shadow-sm);}
+.badge{font-size:10.5px; font-weight:800; letter-spacing:.06em; color:var(--text);
+  padding:5px 9px; border-radius:9px; min-width:62px; text-align:center; flex:none;
+  background:var(--field); border:1px solid var(--border);}
+.s-meta{flex:1; min-width:0;}
+.s-name{font-weight:650; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.s-addr{color:var(--muted); font-size:12.5px; font-family:ui-monospace,"Cascadia Code",Consolas,monospace;
+  margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ping-chip{font-size:12px; font-weight:700; color:var(--muted); min-width:66px; text-align:right; flex:none;}
+.ping-chip.good{color:var(--text)} .ping-chip.mid{color:var(--muted)}
+.ping-chip.bad{color:var(--muted); opacity:.7; font-style:italic;}
+.del-btn{position:relative; overflow:hidden; width:32px; height:32px; border-radius:10px; border:0; background:transparent;
+  color:var(--muted); cursor:pointer; font-size:15px; transition:.2s var(--ease); flex:none;}
+.del-btn:hover{background:var(--text); color:var(--bg);}
+.empty{color:var(--muted); text-align:center; padding:64px 20px; font-size:15px; line-height:1.7; white-space:pre-line;}
+
+/* карточки-формы */
+.card{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:20px 24px; margin-bottom:12px; box-shadow:inset 0 1px 0 var(--specular);}
+.card h3{margin:0 0 12px; font-size:15px; font-weight:700; letter-spacing:-.01em;}
+.card .hint{margin:0 0 12px; font-size:12.5px; color:var(--muted); line-height:1.5;}
+.field, textarea, input[type=text], input[type=number], input[type=password]{
+  width:100%; background:var(--field); border:1px solid var(--border); border-radius:14px;
+  color:var(--text); font-size:14px; padding:12px 14px; outline:none; transition:.2s var(--ease);
+  font-family:inherit; -webkit-user-select:text; user-select:text;}
+textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,monospace; font-size:13px;}
+.field:focus, textarea:focus, input:focus{border-color:var(--text); box-shadow:0 0 0 3px var(--halo);}
+.field::placeholder,textarea::placeholder{color:var(--muted);}
+.btn{position:relative; overflow:hidden; border:0; cursor:pointer; color:var(--btn-fg); font-weight:700; font-size:14px;
+  padding:12px 24px; border-radius:var(--pill); background:var(--btn-bg); font-family:inherit;
+  box-shadow:0 8px 22px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.3); transition:.26s var(--ease); margin-top:12px;}
+.btn:hover{transform:translateY(-2px); box-shadow:0 14px 30px rgba(0,0,0,.28);}
+.btn:disabled{opacity:.5; pointer-events:none;}
+.btn.ghost{background:var(--field); color:var(--text); border:1px solid var(--border); box-shadow:inset 0 1px 0 var(--specular);}
+.btn.ghost:hover{border-color:var(--border-strong);}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap;}
+
+/* настройки */
+.set-row{display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:13px 0; border-bottom:1px solid var(--border);}
+.set-row:last-of-type{border-bottom:0;}
+.set-row .lbl{font-size:14px;}
+.set-row .lbl i{display:block; font-style:normal; font-size:12px; color:var(--muted); margin-top:2px;}
+.set-row .ctl{flex:none; width:210px;} .set-row .ctl.narrow{width:120px;}
+.switch{position:relative; width:52px; height:31px; flex:none;}
+.switch input{display:none;}
+.switch .track{position:absolute; inset:0; background:var(--field); border:1px solid var(--border);
+  border-radius:var(--pill); transition:.32s var(--ease); cursor:pointer; box-shadow:inset 0 1px 3px rgba(0,0,0,.15);}
+.switch .track::after{content:''; position:absolute; top:3px; left:3px; width:23px; height:23px; border-radius:50%;
+  background:var(--text); transition:.32s var(--ease); box-shadow:0 3px 10px rgba(0,0,0,.35);}
+.switch input:checked + .track{background:var(--text); border-color:var(--text);}
+.switch input:checked + .track::after{transform:translateX(21px); background:var(--bg);}
+.xray-status{margin-top:8px; font-size:13px; font-weight:650;}
+.xray-ok{color:var(--text);} .xray-no{color:var(--muted);}
+
+/* ==================== МАРШРУТЫ ==================== */
+.seg{display:flex; gap:4px; background:var(--field); border:1px solid var(--border);
+  border-radius:var(--pill); padding:4px; margin-bottom:6px;}
+.seg button{flex:1; border:0; background:transparent; color:var(--muted); font-family:inherit;
+  font-weight:650; font-size:13.5px; padding:11px 10px; border-radius:var(--pill); cursor:pointer;
+  transition:.3s var(--ease); position:relative; overflow:hidden;}
+.seg button.active{background:var(--text); color:var(--bg); box-shadow:0 4px 16px rgba(0,0,0,.22);}
+.mode-explain{margin:10px 2px 0!important; font-weight:650; color:var(--text)!important;}
+.order-note{margin:12px 0 0!important; padding-top:12px; border-top:1px solid var(--border);}
+
+/* ==================== ПРОФИЛЬ ==================== */
+.prof-head{display:flex; align-items:center; gap:18px;}
+.prof-avatar{width:64px; height:64px; border-radius:20px; flex:none; overflow:hidden;}
+.prof-avatar img{width:100%; height:100%; object-fit:cover; display:block; border-radius:20px;}
+.prof-id{flex:1; min-width:0;}
+.prof-name{font-size:21px; font-weight:750; letter-spacing:-.02em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.prof-name.mono{font-family:ui-monospace,Consolas,monospace;}
+.prof-role{color:var(--muted); font-size:13px; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.prof-badge{flex:none; font-size:11.5px; font-weight:700; letter-spacing:.03em; padding:7px 13px;
+  border-radius:var(--pill); background:var(--text); color:var(--bg);}
+.pv-row{display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:12px 0; border-bottom:1px solid var(--border); font-size:14px;}
+.pv-row:last-child{border-bottom:0;}
+.pv-row span{color:var(--muted);} .pv-row b{font-weight:700; text-align:right;}
+.pv{display:inline-flex; align-items:center; gap:7px;}
+.pv-on::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--text); box-shadow:0 0 0 3px var(--halo);}
+.pv-warn{opacity:.75; font-style:italic;}
+/* объявление от провайдера подписки */
+.announce{display:flex; gap:10px; align-items:flex-start; padding:12px 14px; margin-bottom:14px;
+  border-radius:var(--radius-sm); background:var(--field); border:1px solid var(--border-strong);
+  font-size:13px; line-height:1.45;}
+.announce[hidden]{display:none;}
+.announce::before{content:'!'; flex:none; width:20px; height:20px; border-radius:50%;
+  display:grid; place-items:center; font-weight:800; font-size:12px;
+  background:var(--text); color:var(--bg);}
+/* полоса расхода трафика */
+.usage{margin:4px 0 14px;}
+.usage-top{display:flex; justify-content:space-between; align-items:baseline; font-size:13px; margin-bottom:9px;}
+.usage-top b{font-size:15px; font-weight:750;}
+.usage-top span{color:var(--muted);}
+.bar{height:9px; border-radius:var(--pill); background:var(--field); border:1px solid var(--border); overflow:hidden;}
+.bar > i{display:block; height:100%; width:0; background:var(--text); border-radius:var(--pill);
+  transition:width .8s var(--ease);}
+.bar.low > i{opacity:.45;}
+.stars{display:flex; gap:8px; font-size:30px; line-height:1; cursor:pointer;}
+.star{position:relative; color:var(--muted); opacity:.4; transition:.2s var(--ease); border-radius:50%;}
+.star.on{color:var(--text); opacity:1; transform:scale(1.05);}
+.support-btn{width:100%; margin-top:2px;}
+/* привязка телеграма */
+.tg-linked{display:flex; align-items:center; gap:14px;}
+.tg-linked img{width:52px; height:52px; border-radius:16px; flex:none; object-fit:cover;
+  border:1px solid var(--border);}
+.tg-linked .tg-meta{flex:1; min-width:0;}
+.tg-linked .tg-meta b{display:block; font-size:15px; font-weight:700;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.tg-linked .tg-meta i{font-style:normal; font-size:13px; color:var(--muted);}
+.tg-form{display:flex; gap:10px; align-items:center;}
+.tg-form .field{flex:1;}
+.tg-form .btn{margin-top:0; flex:none;}
+
+/* логи */
+.log-wrap{height:100%; display:flex; flex-direction:column;}
+.log-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px;}
+.log-head h3{margin:0; font-size:16px;}
+.log-box{flex:1; overflow-y:auto; background:var(--field); border:1px solid var(--border);
+  border-radius:18px; padding:14px 16px; font-family:ui-monospace,Consolas,monospace; font-size:12.5px;
+  line-height:1.65; color:var(--text); -webkit-user-select:text; user-select:text; box-shadow:inset 0 1px 0 var(--specular);}
+.log-line{white-space:pre-wrap; word-break:break-all;}
+.log-line::before{content:'›  '; color:var(--muted);}
+
+/* тост */
+.toast{position:fixed; bottom:26px; left:50%; transform:translate(-50%,140%);
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--pill); padding:13px 24px; font-size:14px; font-weight:650; box-shadow:var(--shadow);
+  z-index:150; transition:transform .45s var(--ease); max-width:80vw; color:var(--text);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
+.toast.show{transform:translate(-50%,0);} .toast.err{border-color:var(--border-strong);}
+
+/* ==================== ИКОНКА-ПЛИТКА (iOS 26 liquid glass) ==================== */
+/* без backdrop-filter: на монохромном фоне он незаметен, но при анимации
+   бликов/флоата заставляет WebView2 перерисовывать фон каждый кадр (утечка памяти). */
+.ios-tile{position:relative; display:grid; place-items:center; overflow:hidden; color:var(--text);
+  background:linear-gradient(155deg,var(--surface-2),var(--surface)); border:1px solid var(--border-strong);
+  box-shadow:var(--shadow), inset 0 1.5px 0 var(--specular), inset 0 -14px 30px rgba(0,0,0,.18);}
+.ios-tile svg{width:58%; height:58%; position:relative; z-index:2; stroke:var(--text);
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.25));}
+.ios-tile .glow{position:absolute; inset:0; z-index:1;
+  background:radial-gradient(60% 55% at 30% 18%,var(--sheen),transparent 60%);}
+.ios-tile .streak{position:absolute; top:-60%; left:-30%; width:55%; height:220%;
+  background:linear-gradient(90deg,transparent,var(--specular),transparent); transform:rotate(18deg); opacity:.5;}
+.logo-mark.ios-tile .streak{display:none;}
+
+/* ==================== RIPPLE (капля на воде) ==================== */
+.ripple{position:absolute; border-radius:50%; pointer-events:none; z-index:5; color:inherit;
+  background:radial-gradient(circle, currentColor 0%, transparent 62%); opacity:.30; transform:scale(0);
+  animation:rippleWave .85s var(--ease) forwards;}
+.ripple::after{content:''; position:absolute; inset:0; border-radius:50%;
+  border:2px solid currentColor; opacity:.5; transform:scale(.25); animation:ringWave .85s var(--ease) forwards;}
+@keyframes rippleWave{to{transform:scale(1); opacity:0;}}
+@keyframes ringWave{to{transform:scale(1); opacity:0;}}
+
+/* ==================== ИНТРО (2 экрана) ==================== */
+#intro{position:fixed; inset:0; z-index:200; overflow:hidden; background:var(--bg);
+  transition:opacity .7s var(--ease),transform .7s var(--ease);}
+#intro.gone{opacity:0; transform:scale(1.05); pointer-events:none;}
+.orb{position:absolute; border-radius:50%; background:var(--surface-2); border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 var(--specular); pointer-events:none; opacity:.55;}
+.orb1{width:240px; height:240px; top:-70px; left:-60px; animation:floaty 10s ease-in-out infinite alternate;}
+.orb2{width:180px; height:180px; bottom:-50px; right:-30px; animation:floaty 12s ease-in-out infinite alternate-reverse;}
+.orb3{width:110px; height:110px; top:22%; right:16%; animation:floaty 8s ease-in-out .5s infinite alternate;}
+@keyframes floaty{from{transform:translateY(-12px) translateX(-6px)}to{transform:translateY(16px) translateX(8px)}}
+
+.intro-screen{position:absolute; inset:0; display:grid; place-items:center; padding:26px; text-align:center;
+  opacity:0; visibility:hidden; transform:translateY(20px) scale(.99); filter:blur(8px);
+  transition:opacity .75s var(--ease),transform .75s var(--ease),filter .75s var(--ease),visibility .75s;}
+.intro-screen.active{opacity:1; visibility:visible; transform:none; filter:blur(0);}
+.intro-inner{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; max-width:460px;}
+
+@keyframes introRise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes iconPop{0%{opacity:0;transform:scale(.6)}62%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+@keyframes floatIcon{from{transform:translateY(-6px)}to{transform:translateY(6px)}}
+@keyframes sweep{0%{left:-40%}55%,100%{left:135%}}
+
+.intro-icon{width:116px; height:116px; border-radius:28px; margin-bottom:26px; animation:iconPop 1.1s var(--ease) both;}
+.intro-icon-float{animation:floatIcon 4.6s ease-in-out 1.1s infinite alternate;}
+.intro-icon .streak{animation:sweep 5.5s var(--ease) 1.3s infinite;}
+.intro-tag{font-size:12.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--muted);
+  opacity:0; animation:introRise .9s var(--ease) .35s forwards;}
+.intro-title{font-size:44px; font-weight:750; letter-spacing:-.03em; margin:10px 0 0;
+  opacity:0; animation:introRise .9s var(--ease) .48s forwards;}
+.intro-sub{font-size:16px; color:var(--muted); line-height:1.55; margin:14px 0 0; max-width:380px;
+  opacity:0; animation:introRise .9s var(--ease) .62s forwards;}
+.intro-btn{position:relative; overflow:hidden; margin-top:36px; border:0; cursor:pointer; color:var(--btn-fg);
+  font-size:16px; font-weight:700; padding:0 30px; height:58px; min-width:250px; border-radius:var(--pill);
+  background:var(--btn-bg); display:inline-flex; align-items:center; justify-content:center; gap:11px;
+  font-family:inherit;
+  box-shadow:0 16px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35); transition:.3s var(--ease);}
+.intro-btn:hover{transform:translateY(-2px); box-shadow:0 22px 52px rgba(0,0,0,.34);}
+.intro-btn:active{transform:translateY(0);}
+.intro-btn svg{width:20px; height:20px; fill:currentColor;}
+.intro-btn.loading{pointer-events:none;}
+.intro-btn .spin{width:18px; height:18px; border:2px solid currentColor; border-right-color:transparent;
+  border-radius:50%; display:none; animation:spin .7s linear infinite;}
+.intro-btn.loading .spin{display:inline-block;}
+.intro-btn.loading .lbl,.intro-btn.loading svg{display:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#introS1 .intro-btn{opacity:0; animation:introRise .9s var(--ease) .78s forwards;}
+.intro-note{margin-top:16px; font-size:12.5px; color:var(--muted);
+  opacity:0; animation:introRise .9s var(--ease) .9s forwards;}
+
+/* шаг привязки Telegram в знакомстве */
+.tg-intro-form{display:flex; gap:10px; align-items:center; margin-top:30px; width:100%; max-width:400px;
+  opacity:0; animation:introRise .9s var(--ease) .7s forwards;}
+.tg-intro-form .field{flex:1; text-align:center; font-size:15px; padding:16px 14px; border-radius:var(--pill);}
+.tg-intro-form .intro-btn{margin-top:0; min-width:150px; height:54px; flex:none;}
+.tg-intro-form[hidden]{display:none;}
+.tg-intro-card{display:flex; align-items:center; gap:14px; margin-top:28px; padding:14px 20px 14px 14px;
+  border-radius:var(--pill); background:var(--surface-2); border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 var(--specular); animation:iconPop .7s var(--ease) both; text-align:left;}
+.tg-intro-card[hidden]{display:none;}
+.tg-intro-card img{width:54px; height:54px; border-radius:50%; flex:none; object-fit:cover;
+  border:1px solid var(--border);}
+.tg-intro-card b{display:block; font-size:16px; font-weight:750; max-width:230px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.tg-intro-card i{font-style:normal; font-size:13.5px; color:var(--muted);}
+.intro-skip{margin-top:18px; border:0; background:transparent; color:var(--muted); cursor:pointer;
+  font-family:inherit; font-size:13.5px; font-weight:650; padding:8px 14px; border-radius:var(--pill);
+  transition:.25s var(--ease); opacity:0; animation:introRise .9s var(--ease) .85s forwards;}
+.intro-skip:hover{color:var(--text);}
+#tgIntroNext{margin-top:26px; min-width:240px;}
+#tgIntroNext[hidden]{display:none;}
+
+/* экран-хаб */
+.hub-badge{display:inline-flex; align-items:center; gap:9px; font-size:12.5px; font-weight:650; color:var(--text);
+  padding:9px 16px; border-radius:var(--pill); background:var(--surface-2); border:1px solid var(--border);
+  box-shadow:inset 0 1px 0 var(--specular); margin-bottom:22px;}
+.hub-badge::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--text); box-shadow:0 0 0 3px var(--halo);}
+.hub-icon{width:84px; height:84px; border-radius:22px; margin-bottom:18px;}
+.hub-title{font-size:38px; font-weight:750; letter-spacing:-.03em; margin:0;}
+.hub-text{margin:16px 0 0; max-width:440px;}
+.hub-text p{margin:0 0 12px; font-size:15px; line-height:1.6; color:var(--muted); text-align:center;}
+.hub-text p:last-child{margin-bottom:0; color:var(--text);}
+#introContinue{margin-top:34px; min-width:260px;}
+
+/* пользователь просит меньше движения — уважаем */
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001s!important; animation-iteration-count:1!important; transition-duration:.15s!important;}
+  .orb{animation:none!important;}
+}
+</style>
+</head>
+<body class="intro-active">
+
+<!-- ============================ ИНТРО ============================ -->
+<div id="intro">
+  <span class="orb orb1"></span><span class="orb orb2"></span><span class="orb orb3"></span>
+
+  <div class="intro-screen active" id="introS1">
+    <div class="intro-inner">
+      <div class="ios-tile intro-icon intro-icon-float">
+        <span class="glow"></span><span class="streak"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/>
+          <path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/>
+          <path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/>
+          <path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/>
+        </svg>
+      </div>
+      <div class="intro-tag" data-i18n="intro_tag"></div>
+      <h1 class="intro-title">LEDOKOL HUB</h1>
+      <p class="intro-sub" data-i18n="intro_sub"></p>
+      <button class="intro-btn" id="introTgBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
+        <span class="lbl" data-i18n="intro_btn"></span>
+        <span class="spin"></span>
+      </button>
+      <div class="intro-note" data-i18n="intro_note"></div>
+    </div>
+  </div>
+
+  <!-- шаг 2: привязка Telegram, чтобы профиль был личным с первого запуска -->
+  <div class="intro-screen" id="introTg">
+    <div class="intro-inner">
+      <div class="ios-tile intro-icon intro-icon-float" id="tgIntroTile">
+        <span class="glow"></span><span class="streak"></span>
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
+      </div>
+      <h1 class="intro-title" id="tgIntroTitle" data-i18n="tg_intro_title"></h1>
+      <p class="intro-sub" id="tgIntroSub" data-i18n="tg_intro_sub"></p>
+
+      <div class="tg-intro-form" id="tgIntroForm">
+        <input type="text" class="field" id="tgIntroInput" placeholder="@username" spellcheck="false">
+        <button class="intro-btn" id="tgIntroBtn">
+          <span class="lbl" data-i18n="tg_link"></span><span class="spin"></span>
+        </button>
+      </div>
+
+      <div class="tg-intro-card" id="tgIntroCard" hidden>
+        <img id="tgIntroAvatar" alt="">
+        <div><b id="tgIntroName"></b><i id="tgIntroUser"></i></div>
+      </div>
+
+      <button class="intro-btn" id="tgIntroNext" hidden><span class="lbl" data-i18n="hub_continue"></span></button>
+      <button class="intro-skip" id="tgIntroSkip" data-i18n="tg_intro_skip"></button>
+    </div>
+  </div>
+
+  <div class="intro-screen" id="introS2">
+    <div class="intro-inner">
+      <div class="hub-badge" data-i18n="hub_badge"></div>
+      <div class="ios-tile hub-icon">
+        <span class="glow"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/>
+          <path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/>
+          <path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/>
+          <path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/>
+        </svg>
+      </div>
+      <h1 class="hub-title" data-i18n="hub_title"></h1>
+      <div class="hub-text">
+        <p data-i18n="hub_p1"></p>
+        <p data-i18n="hub_p2"></p>
+        <p data-i18n="hub_p3"></p>
+      </div>
+      <button class="intro-btn" id="introContinue"><span class="lbl" data-i18n="hub_continue"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ ПРИЛОЖЕНИЕ ============================ -->
+<div class="app" id="appRoot">
+
+  <header class="topbar glass rise d1">
+    <div class="brand">
+      <span class="logo-mark ios-tile">
+        <span class="glow"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/>
+          <path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/>
+          <path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/>
+          <path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/>
+        </svg>
+      </span>
+      <span class="logo-text">LEDOKOL HUB<span id="brandEmoji"></span></span>
+    </div>
+    <div class="top-actions">
+      <div class="lang-toggle">
+        <button data-lang="ru">RU</button>
+        <button data-lang="en">EN</button>
+      </div>
+      <button class="icon-btn" id="themeBtn" title="Theme"></button>
+    </div>
+  </header>
+
+  <section class="hero glass rise d2">
+    <div class="hero-left">
+      <div class="status-dot" id="statusDot"></div>
+      <div>
+        <div class="status-title" id="statusTitle" data-i18n="disconnected"></div>
+        <div class="status-sub" id="statusSub" data-i18n="pick_server"></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="speed" id="speedBox">
+        <span>↓ <b id="spDown">0 Б/с</b></span>
+        <span>↑ <b id="spUp">0 Б/с</b></span>
+      </div>
+      <button class="connect-btn" id="connectBtn" data-i18n="connect"></button>
+    </div>
+  </section>
+
+  <!-- режимы: прокси и туннель, можно оба сразу -->
+  <section class="modes rise d3">
+    <button class="mode-tile" id="modeProxy">
+      <span class="m-top">
+        <span class="m-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg></span>
+        <span class="sw"></span>
+      </span>
+      <span class="m-name" data-i18n="mode_proxy"></span>
+      <span class="m-sub" data-i18n="mode_proxy_sub"></span>
+    </button>
+    <button class="mode-tile" id="modeTun">
+      <span class="m-top">
+        <span class="m-ic"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2.5"/><path d="M8 21h8M12 17v4M7 10.5h4M14.5 8.5l2.5 2l-2.5 2"/></svg></span>
+        <span class="sw"></span>
+      </span>
+      <span class="m-name" data-i18n="mode_tun"></span>
+      <span class="m-sub" id="modeTunSub" data-i18n="mode_tun_sub"></span>
+    </button>
+  </section>
+
+  <div class="banner rise d3" id="adminBanner" hidden>
+    <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3.4v5c0 4.3-3.1 8.2-7.5 9.6-4.4-1.4-7.5-5.3-7.5-9.6v-5z"/><path d="M12 9v3.5M12 16v.01"/></svg></span>
+    <div class="banner-tx"><b data-i18n="admin_title"></b><span data-i18n="admin_sub"></span></div>
+    <button class="banner-btn" id="adminBtn" data-i18n="admin_btn"></button>
+    <button class="banner-x" id="adminClose">✕</button>
+  </div>
+
+  <div class="banner rise d3" id="conflictBanner" hidden>
+    <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.4v.01"/></svg></span>
+    <div class="banner-tx"><b data-i18n="conflict_title"></b><span id="conflictNames"></span></div>
+    <button class="banner-x" id="conflictClose">✕</button>
+  </div>
+
+  <div class="banner rise d3" id="saveBanner" hidden>
+    <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.4v.01"/></svg></span>
+    <div class="banner-tx"><b data-i18n="save_fail_title"></b><span id="saveErrText"></span></div>
+    <button class="banner-btn" id="saveErrBtn" data-i18n="open_data_dir"></button>
+  </div>
+
+  <section class="quick-links rise d3">
+    <button class="qlink" data-ext="https://t.me/LEDOKOL_SALES_BOT">
+      <span class="q-ic"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg></span>
+      <span class="q-tx"><b data-i18n="ql_connect"></b><i data-i18n="ql_connect_sub"></i></span>
+      <span class="q-arrow">→</span>
+    </button>
+    <button class="qlink" data-ext="https://t.me/ledokolmoderatorbot">
+      <span class="q-ic"><svg viewBox="0 0 24 24"><path d="M12 2.6l1.9 4.4 4.8.4-3.65 3.16 1.1 4.7L12 17.2l-4.15 2.46 1.1-4.7L5.3 7.8l4.8-.4z"/></svg></span>
+      <span class="q-tx"><b data-i18n="ql_ai"></b><i data-i18n="ql_ai_sub"></i></span>
+      <span class="q-arrow">→</span>
+    </button>
+  </section>
+
+  <nav class="tabs glass rise d4">
+    <button class="tab active" data-tab="servers" data-i18n="tab_servers"></button>
+    <button class="tab" data-tab="profile" data-i18n="tab_profile"></button>
+    <button class="tab" data-tab="add" data-i18n="tab_add"></button>
+    <button class="tab" data-tab="routes" data-i18n="tab_routes"></button>
+    <button class="tab" data-tab="settings" data-i18n="tab_settings"></button>
+    <button class="tab" data-tab="logs" data-i18n="tab_logs"></button>
+    <span class="spacer"></span>
+    <button class="ping-btn" id="pingBtn" data-i18n="ping_all"></button>
+  </nav>
+
+  <main class="content rise d5">
+    <section class="panel active" id="panel-servers">
+      <div class="server-list" id="serverList"></div>
+    </section>
+
+    <!-- ======================= ПРОФИЛЬ ======================= -->
+    <section class="panel" id="panel-profile">
+      <div class="card prof-head">
+        <span class="ios-tile prof-avatar" id="profAvatar">
+          <span class="glow"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/>
+            <path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/>
+            <path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/>
+            <path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/>
+          </svg>
+        </span>
+        <div class="prof-id">
+          <div class="prof-name mono" id="profName">LDK-0000</div>
+          <div class="prof-role" id="profRole" data-i18n="prof_role"></div>
+        </div>
+        <div class="prof-badge" data-i18n="plan_test"></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="tg_title"></h3>
+        <p class="hint" data-i18n="tg_hint"></p>
+        <div id="tgLinked" class="tg-linked" hidden>
+          <img id="tgAvatar" alt="">
+          <div class="tg-meta"><b id="tgName"></b><i id="tgUser"></i></div>
+          <button class="btn ghost" id="tgUnlinkBtn" style="margin-top:0" data-i18n="tg_unlink"></button>
+        </div>
+        <div id="tgForm" class="tg-form">
+          <input type="text" class="field" id="tgInput" placeholder="@username" spellcheck="false">
+          <button class="btn" id="tgLinkBtn" data-i18n="tg_link"></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="prof_sub_title"></h3>
+        <div class="announce" id="subAnnounce" hidden></div>
+        <div class="usage" id="subUsage" hidden>
+          <div class="usage-top">
+            <b id="subLeft"></b>
+            <span id="subUsed"></span>
+          </div>
+          <div class="bar" id="subBar"><i></i></div>
+        </div>
+        <div class="pv-row"><span data-i18n="prof_status"></span><b class="pv" id="pvStatus"></b></div>
+        <div class="pv-row" id="rowExpire" hidden><span data-i18n="prof_expire"></span><b id="pvExpire"></b></div>
+        <div class="pv-row" id="rowTraffic" hidden><span data-i18n="prof_traffic"></span><b id="pvTraffic"></b></div>
+        <div class="pv-row"><span data-i18n="prof_plan"></span><b id="pvPlan"></b></div>
+        <div class="pv-row"><span data-i18n="prof_source"></span><b id="pvSource"></b></div>
+        <div class="pv-row"><span data-i18n="prof_servers"></span><b id="pvServers"></b></div>
+        <div class="pv-row" id="rowUpdated" hidden><span data-i18n="prof_updated"></span><b id="pvUpdated"></b></div>
+        <button class="btn ghost" id="refreshSubBtn" data-i18n="sub_refresh"></button>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="prof_rate"></h3>
+        <div class="stars" id="rateStars">
+          <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+          <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
+          <span class="star" data-v="5">★</span>
+        </div>
+      </div>
+
+      <button class="btn support-btn" data-ext="https://t.me/mimidevil" data-i18n="support_btn"></button>
+    </section>
+
+    <!-- ======================= ДОБАВИТЬ ======================= -->
+    <section class="panel" id="panel-add">
+      <div class="card">
+        <h3 data-i18n="add_links_label"></h3>
+        <textarea id="linksBox" placeholder="vless://...&#10;vmess://...&#10;trojan://...&#10;ss://..."></textarea>
+        <button class="btn" id="addBtn" data-i18n="add_btn"></button>
+      </div>
+      <div class="card">
+        <h3 data-i18n="sub_label"></h3>
+        <input type="text" class="field" id="subBox" placeholder="https://example.com/sub/..." spellcheck="false">
+        <button class="btn" id="subBtn" data-i18n="sub_btn"></button>
+      </div>
+    </section>
+
+    <!-- ======================= МАРШРУТЫ ======================= -->
+    <section class="panel" id="panel-routes">
+      <div class="card">
+        <h3 data-i18n="route_mode_title"></h3>
+        <p class="hint" data-i18n="route_mode_hint"></p>
+        <div class="seg" id="routeSeg">
+          <button data-mode="global" data-i18n="route_global"></button>
+          <button data-mode="rules" data-i18n="route_rules"></button>
+          <button data-mode="direct" data-i18n="route_direct"></button>
+        </div>
+        <p class="hint mode-explain" id="routeExplain"></p>
+      </div>
+      <div class="card">
+        <h3 data-i18n="route_direct_title"></h3>
+        <p class="hint" data-i18n="route_direct_hint"></p>
+        <textarea id="directBox" spellcheck="false" placeholder="gosuslugi.ru&#10;*.sberbank.ru&#10;192.168.50.0/24"></textarea>
+      </div>
+      <div class="card">
+        <h3 data-i18n="route_block_title"></h3>
+        <p class="hint" data-i18n="route_block_hint"></p>
+        <textarea id="blockBox" spellcheck="false" placeholder="ads.example.com&#10;geosite:category-ads-all"></textarea>
+        <p class="hint order-note" data-i18n="route_order"></p>
+        <button class="btn" id="saveRoutesBtn" data-i18n="save_btn"></button>
+      </div>
+    </section>
+
+    <!-- ======================= НАСТРОЙКИ ======================= -->
+    <section class="panel" id="panel-settings">
+      <div class="card">
+        <div class="set-row">
+          <span class="lbl" data-i18n="set_socks"></span>
+          <input type="number" class="field ctl narrow" id="setSocks">
+        </div>
+        <div class="set-row">
+          <span class="lbl" data-i18n="set_http"></span>
+          <input type="number" class="field ctl narrow" id="setHttp">
+        </div>
+        <div class="set-row">
+          <span class="lbl"><span data-i18n="set_prio"></span><i data-i18n="set_prio_sub"></i></span>
+          <label class="switch"><input type="checkbox" id="setPrio"><span class="track"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="lbl" data-i18n="set_tray"></span>
+          <label class="switch"><input type="checkbox" id="setTray"><span class="track"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="lbl" data-i18n="set_startmin"></span>
+          <label class="switch"><input type="checkbox" id="setStartMin"><span class="track"></span></label>
+        </div>
+        <div class="set-row">
+          <span class="lbl"><span data-i18n="set_dns"></span><i data-i18n="set_dns_sub"></i></span>
+          <input type="text" class="field ctl narrow" id="setDns" spellcheck="false">
+        </div>
+        <div class="set-row">
+          <span class="lbl" data-i18n="set_xray"></span>
+          <input type="text" class="field ctl" id="setXray" placeholder="auto" spellcheck="false">
+        </div>
+        <button class="btn" id="saveBtn" data-i18n="save_btn"></button>
+        <div class="xray-status" id="xrayStatus"></div>
+        <div class="xray-status" id="tunStatus"></div>
+      </div>
+      <div class="card">
+        <h3 data-i18n="diag_title"></h3>
+        <p class="hint" id="dataDirText"></p>
+        <div class="btn-row">
+          <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-logs">
+      <div class="log-wrap">
+        <div class="log-head">
+          <h3 data-i18n="tab_logs"></h3>
+          <button class="ping-btn" id="clearLogs" data-i18n="logs_clear"></button>
+        </div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================ I18N ============================ */
+const I18N = {
+  ru:{
+    disconnected:"Отключено", connected:"Подключено", connecting:"Подключение…",
+    pick_server:"выберите сервер и нажмите «Подключиться»",
+    selected_pfx:"выбран: ", connect:"Подключиться", disconnect:"Отключиться",
+    tab_servers:"Серверы", tab_profile:"Профиль", tab_add:"Добавить",
+    tab_routes:"Маршруты", tab_settings:"Настройки", tab_logs:"Логи",
+    ping_all:"Пинг всех", no_servers:"Пока нет серверов.\nДобавьте ключ или подписку во вкладке «Добавить».",
+    add_links_label:"Ссылки (vless / vmess / trojan / ss) — по одной на строку",
+    add_btn:"Добавить серверы", sub_label:"Импорт из подписки", sub_btn:"Импортировать",
+    set_socks:"Порт SOCKS", set_http:"Порт HTTP",
+    set_prio:"Высокий приоритет", set_prio_sub:"Если приложение запускается вяло",
+    set_tray:"Сворачивать в трей при закрытии", set_startmin:"Запускать свёрнутым в трей",
+    set_dns:"DNS для туннеля", set_dns_sub:"Используется в режиме «Туннель»",
+    set_xray:"Путь к xray.exe", save_btn:"Сохранить", logs_clear:"Очистить",
+    xray_ok:"✓ Ядро xray найдено", xray_no:"✕ xray.exe не найден — положите его рядом с приложением",
+    tun_ok:"✓ tun2socks найден — режим «Туннель» доступен",
+    tun_no:"✕ tun2socks.exe не найден — режим «Туннель» работать не будет",
+    added:"Добавлено серверов: ", sub_loaded:"Загружено серверов: ", sub_loading:"Загружаю подписку…",
+    select_first:"Сначала выберите сервер", saved:"Настройки сохранены",
+    save_failed:"Не удалось сохранить — подробности в «Настройки → Папка с данными»",
+    err_empty_url:"Укажите ссылку на подписку", err_empty_sub:"Подписка пуста или не распознана",
+    err_no_links:"Не удалось разобрать ни одной ссылки", err_generic:"Ошибка: ",
+    err_no_server:"Сервер не выбран", err_need_admin:"Для туннеля нужны права администратора",
+    err_no_tun2socks:"Не найден tun2socks.exe — положите его рядом с приложением",
+    ql_connect:"Подключиться", ql_connect_sub:"Купить доступ в боте",
+    ql_ai:"Задать вопросы ИИ", ql_ai_sub:"Помощник Ledokol",
+    conflict_title:"Обнаружен другой VPN. Отключите его, чтобы избежать конфликтов:",
+    conflict_warn:"Сначала отключите сторонний VPN: ",
+    save_fail_title:"Настройки не сохраняются", open_data_dir:"Папка с данными",
+    diag_title:"Диагностика", diag_hint:"Здесь лежат настройки, список серверов и app.log",
+    mode_proxy:"Прокси", mode_proxy_sub:"Браузеры и программы, которые слушают системный прокси",
+    mode_tun:"Туннель", mode_tun_sub:"Весь трафик системы, включая игры и приложения",
+    mode_tun_admin:"Нужны права администратора",
+    mode_tun_failed:"Не поднялся — причина во вкладке «Логи»",
+    mode_none:"Оба режима выключены — трафик пойдёт напрямую",
+    admin_title:"Режиму «Туннель» нужны права администратора",
+    admin_sub:"Перезапустим приложение — Windows спросит подтверждение",
+    admin_btn:"Перезапустить", admin_denied:"Перезапуск отменён",
+    tg_title:"Telegram", tg_hint:"Введите свой @username — подтянем имя и аватарку из Telegram",
+    tg_link:"Привязать", tg_unlink:"Отвязать", tg_linking:"Ищу профиль…",
+    tg_ok:"Аккаунт привязан", tg_err_bad_username:"Похоже, это не юзернейм Telegram",
+    tg_err_not_found:"Такой аккаунт не найден. Он должен быть публичным",
+    tg_err_network:"Не удалось связаться с Telegram",
+    prof_role:"Локальный профиль", prof_sub_title:"Подписка",
+    prof_status:"Статус", prof_plan:"Тариф", prof_source:"Источник", prof_servers:"Серверов",
+    prof_expire:"Действует до", prof_traffic:"Трафик", prof_updated:"Обновлено",
+    prof_rate:"Оцените приложение", support_btn:"Поддержать проект",
+    sub_refresh:"Обновить подписку", sub_refreshed:"Подписка обновлена",
+    sub_left:"Осталось ", sub_used_of:" из ", sub_unlimited:"Безлимит",
+    sub_days:"осталось дней: ", sub_expired:"Срок истёк", sub_forever:"Бессрочно",
+    plan_test:"Тестовый доступ", status_active:"Активна", status_none:"Не настроена",
+    src_sub:"Подписка", src_manual:"Ручное добавление", src_none:"—",
+    route_mode_title:"Режим маршрутизации", route_saved:"Маршруты применены",
+    route_mode_hint:"Что делать с трафиком, который НЕ попал в списки ниже. Сами списки работают всегда, в любом режиме.",
+    route_global:"Глобальный", route_rules:"По правилам", route_direct:"Прямой",
+    route_global_x:"весь трафик через VPN",
+    route_rules_x:"российские сайты напрямую, остальное через VPN",
+    route_direct_x:"VPN не используется",
+    route_direct_title:"Сайты в обход VPN",
+    route_direct_hint:"Всегда идут напрямую, даже в режиме «Глобальный». По одному на строку: gosuslugi.ru, *.sberbank.ru, 192.168.50.0/24",
+    route_block_title:"Заблокировать",
+    route_block_hint:"Всегда без доступа, в любом режиме. Поддерживаются готовые списки, например geosite:category-ads-all",
+    route_order:"Порядок проверки: локальная сеть → «Заблокировать» → «В обход VPN» → режим. Что совпало первым, то и сработает.",
+    intro_tag:"Ledokol VPN",
+    intro_sub:"Быстрое и защищённое подключение без лишних настроек. Начните с нашего Telegram.",
+    intro_btn:"Открыть Telegram", intro_note:"Откроем канал, затем продолжим",
+    tg_intro_title:"Ваш профиль",
+    tg_intro_sub:"Введите свой @username в Telegram — подтянем имя и аватарку, чтобы профиль был вашим с первого запуска.",
+    tg_intro_skip:"Пропустить, настрою позже",
+    tg_intro_done:"Отлично, узнали вас",
+    hub_badge:"Приложение для пользователей Ledokol VPN",
+    hub_title:"Добро пожаловать",
+    hub_p1:"Это клиент Ledokol VPN. Здесь вы подключаетесь к своим серверам, проверяете задержку и управляете соединением в пару касаний.",
+    hub_p2:"Режим «Прокси» направит в VPN браузеры и программы, а «Туннель» — вообще весь трафик системы. Можно включить оба сразу.",
+    hub_p3:"Чтобы начать — добавьте свой ключ или подписку во вкладке «Добавить». Приятного пользования!",
+    hub_continue:"Продолжить"
+  },
+  en:{
+    disconnected:"Disconnected", connected:"Connected", connecting:"Connecting…",
+    pick_server:"select a server and press “Connect”",
+    selected_pfx:"selected: ", connect:"Connect", disconnect:"Disconnect",
+    tab_servers:"Servers", tab_profile:"Profile", tab_add:"Add",
+    tab_routes:"Routing", tab_settings:"Settings", tab_logs:"Logs",
+    ping_all:"Ping all", no_servers:"No servers yet.\nAdd a key or a subscription in the “Add” tab.",
+    add_links_label:"Links (vless / vmess / trojan / ss) — one per line",
+    add_btn:"Add servers", sub_label:"Import from subscription", sub_btn:"Import",
+    set_socks:"SOCKS port", set_http:"HTTP port",
+    set_prio:"High priority", set_prio_sub:"If the app starts sluggishly",
+    set_tray:"Minimize to tray on close", set_startmin:"Start minimized to tray",
+    set_dns:"Tunnel DNS", set_dns_sub:"Used in Tunnel mode",
+    set_xray:"Path to xray.exe", save_btn:"Save", logs_clear:"Clear",
+    xray_ok:"✓ xray core found", xray_no:"✕ xray.exe not found — place it next to the app",
+    tun_ok:"✓ tun2socks found — Tunnel mode is available",
+    tun_no:"✕ tun2socks.exe not found — Tunnel mode will not work",
+    added:"Servers added: ", sub_loaded:"Servers loaded: ", sub_loading:"Loading subscription…",
+    select_first:"Select a server first", saved:"Settings saved",
+    save_failed:"Could not save — see Settings → Data folder",
+    err_empty_url:"Enter a subscription link", err_empty_sub:"Subscription is empty or unrecognized",
+    err_no_links:"Could not parse any link", err_generic:"Error: ",
+    err_no_server:"No server selected", err_need_admin:"Tunnel mode requires administrator rights",
+    err_no_tun2socks:"tun2socks.exe not found — place it next to the app",
+    ql_connect:"Get access", ql_connect_sub:"Buy in the bot",
+    ql_ai:"Ask the AI", ql_ai_sub:"Ledokol assistant",
+    conflict_title:"Another VPN detected. Disable it to avoid conflicts:",
+    conflict_warn:"Disable the third-party VPN first: ",
+    save_fail_title:"Settings are not being saved", open_data_dir:"Data folder",
+    diag_title:"Diagnostics", diag_hint:"Settings, server list and app.log live here",
+    mode_proxy:"Proxy", mode_proxy_sub:"Browsers and apps that follow the system proxy",
+    mode_tun:"Tunnel", mode_tun_sub:"All system traffic, including games and apps",
+    mode_tun_admin:"Administrator rights required",
+    mode_tun_failed:"Did not start — see the Logs tab",
+    mode_none:"Both modes are off — traffic goes directly",
+    admin_title:"Tunnel mode needs administrator rights",
+    admin_sub:"We will restart the app — Windows will ask for confirmation",
+    admin_btn:"Restart", admin_denied:"Restart cancelled",
+    tg_title:"Telegram", tg_hint:"Enter your @username — we will pull your name and avatar from Telegram",
+    tg_link:"Link", tg_unlink:"Unlink", tg_linking:"Looking up profile…",
+    tg_ok:"Account linked", tg_err_bad_username:"That does not look like a Telegram username",
+    tg_err_not_found:"Account not found. It has to be public",
+    tg_err_network:"Could not reach Telegram",
+    prof_role:"Local profile", prof_sub_title:"Subscription",
+    prof_status:"Status", prof_plan:"Plan", prof_source:"Source", prof_servers:"Servers",
+    prof_expire:"Valid until", prof_traffic:"Traffic", prof_updated:"Updated",
+    prof_rate:"Rate the app", support_btn:"Support the project",
+    sub_refresh:"Refresh subscription", sub_refreshed:"Subscription updated",
+    sub_left:"Left ", sub_used_of:" of ", sub_unlimited:"Unlimited",
+    sub_days:"days left: ", sub_expired:"Expired", sub_forever:"No expiry",
+    plan_test:"Test access", status_active:"Active", status_none:"Not set",
+    src_sub:"Subscription", src_manual:"Manual", src_none:"—",
+    route_mode_title:"Routing mode", route_saved:"Routing applied",
+    route_mode_hint:"What to do with traffic that is NOT in the lists below. The lists themselves always apply, in every mode.",
+    route_global:"Global", route_rules:"Rules", route_direct:"Direct",
+    route_global_x:"all traffic through the VPN",
+    route_rules_x:"local sites direct, everything else through the VPN",
+    route_direct_x:"VPN is not used",
+    route_direct_title:"Sites that bypass the VPN",
+    route_direct_hint:"Always go direct, even in Global mode. One per line: gov.uk, *.bank.com, 192.168.50.0/24",
+    route_block_title:"Block",
+    route_block_hint:"Always denied, in every mode. Ready-made lists work too, e.g. geosite:category-ads-all",
+    route_order:"Check order: local network → Block → Bypass → mode. First match wins.",
+    intro_tag:"Ledokol VPN",
+    intro_sub:"Fast, secure connection with no fuss. Start with our Telegram.",
+    intro_btn:"Open Telegram", intro_note:"We’ll open the channel, then continue",
+    tg_intro_title:"Your profile",
+    tg_intro_sub:"Enter your Telegram @username — we will pull your name and avatar so the profile is yours from the very first launch.",
+    tg_intro_skip:"Skip, I'll set it up later",
+    tg_intro_done:"Great, we recognised you",
+    hub_badge:"App for Ledokol VPN users",
+    hub_title:"Welcome",
+    hub_p1:"This is the Ledokol VPN client. Connect to your servers, check latency and manage the connection in a couple of taps.",
+    hub_p2:"Proxy mode sends browsers and apps through the VPN, Tunnel mode covers all system traffic. You can enable both.",
+    hub_p3:"To get started, add your key or subscription in the “Add” tab. Enjoy!",
+    hub_continue:"Continue"
+  }
+};
+let LANG = "ru";
+const t = (k)=> (I18N[LANG][k] ?? k);
+
+function applyLang(lang){
+  LANG = (lang==="en") ? "en" : "ru";
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll(".lang-toggle button").forEach(b=>
+    b.classList.toggle("active", b.dataset.lang===LANG));
+  updateConnectUI(); renderServers(); updateXrayStatus(); renderProfile();
+  renderConflicts(); renderModes(); renderRoutes();
+}
+
+/* ============================ ТЕМА ============================ */
+const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+const AUTO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg>';
+let THEME = "auto";
+const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+function systemDark(){ return mq ? mq.matches : true; }
+function effectiveDark(){ return THEME==="dark" || (THEME==="auto" && systemDark()); }
+function applyTheme(){
+  document.body.classList.toggle("theme-dark", THEME==="dark");
+  document.body.classList.toggle("theme-light", THEME==="light");
+  const btn=document.getElementById("themeBtn");
+  btn.innerHTML = THEME==="auto" ? AUTO : (effectiveDark() ? MOON : SUN);
+  btn.title = THEME==="auto" ? "Тема: как в системе" : (THEME==="dark" ? "Тёмная тема" : "Светлая тема");
+}
+if(mq){ mq.addEventListener("change", ()=>{ if(THEME==="auto") applyTheme(); }); }
+
+/* ============================ СОСТОЯНИЕ ============================ */
+/* xray_found / tun_found до первого ответа Python — null, а не false:
+   иначе первый же рендер (до загрузки состояния) объявляет файлы ненайденными,
+   и пользователь видит «tun2socks не найден» на исправной установке. */
+let STATE = {servers:[], selected:-1, connected:false, settings:{}, local_id:"",
+             rating:0, sub:{}, speed:{}, conflicts:[],
+             xray_found:null, tun_found:null, is_admin:null};
+let CONFLICTS = [];
+let uptimeTimer = null, uptimeStart = 0;
+const $ = (id)=>document.getElementById(id);
+const api = ()=> (window.pywebview && window.pywebview.api) || null;
+
+/* ---------- форматирование ---------- */
+function fmtBytes(n){
+  n = Number(n)||0;
+  const u=["Б","КБ","МБ","ГБ","ТБ"]; let i=0;
+  while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+  return (i===0 ? n.toFixed(0) : (n>=100 ? n.toFixed(0) : n.toFixed(n>=10?1:2))) + " " + u[i];
+}
+function fmtSpeed(n){ return fmtBytes(n) + "/с"; }
+function fmtDate(ts){
+  try{
+    const d=new Date(ts*1000);
+    return d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",
+      {day:"2-digit", month:"2-digit", year:"numeric"});
+  }catch(e){ return "—"; }
+}
+function fmtWhen(ts){
+  if(!ts) return "—";
+  try{
+    const d=new Date(ts*1000);
+    return d.toLocaleString(LANG==="en"?"en-GB":"ru-RU",
+      {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+  }catch(e){ return "—"; }
+}
+
+async function init(){
+  STATE = await api().get_state();
+  const s = STATE.settings || {};
+  THEME = s.theme || "auto"; applyTheme();
+  applyLang(s.lang || "ru");
+  fillSettings(); renderServers(); updateConnectUI(); updateXrayStatus();
+  renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
+  CONFLICTS = STATE.conflicts || []; renderConflicts();
+
+  // Знакомство показываем один раз: либо оно уже пройдено, либо серверы уже есть.
+  if(STATE.intro_done || (STATE.servers && STATE.servers.length)){
+    const intro=$("intro"); if(intro) intro.remove();
+    document.body.classList.remove("intro-active");
+    showApp();
+  }else{
+    document.body.classList.add("intro-active");
+  }
+
+  setInterval(tickEmoji, 60000);
+  // лёгкая сверка с Python: туннель мог отвалиться, сторонний VPN — закрыться
+  setInterval(async ()=>{
+    if(!api() || document.hidden) return;
+    try{
+      const s = await api().get_state();
+      const changed = s.tun_active!==STATE.tun_active || s.connected!==STATE.connected
+                   || s.is_admin!==STATE.is_admin || s.tun_found!==STATE.tun_found;
+      STATE = s;
+      if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
+    }catch(e){}
+  }, 5000);
+}
+
+/* Показать интерфейс. Раньше здесь был requestAnimationFrame — но если окно
+   стартует свёрнутым или перекрытым, WebView2 не рисует кадры и колбэк не
+   приходит вовсе: приложение остаётся прозрачным и выглядит зависшим.
+   Таймер срабатывает всегда, а слушатели ниже — страховка на любой случай. */
+function showApp(){
+  const root=$("appRoot");
+  if(root) setTimeout(()=>root.classList.add("go"), 20);
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(!document.hidden && !document.body.classList.contains("intro-active")) showApp();
+});
+window.addEventListener("focus", ()=>{
+  if(!document.body.classList.contains("intro-active")) showApp();
+});
+
+/* ---------- эмодзи возле названия ---------- */
+function renderEmoji(){
+  const el=$("brandEmoji"); if(!el) return;
+  const e=STATE.emoji||"";
+  if(el.textContent===e) return;
+  el.textContent=e;
+  el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+}
+async function tickEmoji(){
+  try{
+    if(!api()) return;
+    const r=await api().tick_emoji();
+    if(r && r.emoji && r.emoji!==STATE.emoji){ STATE.emoji=r.emoji; renderEmoji(); }
+  }catch(e){}
+}
+
+/* ---------- сторонние VPN ---------- */
+window.__pushConflicts=(list)=>{ CONFLICTS=list||[]; renderConflicts(); };
+function renderConflicts(){
+  const b=$("conflictBanner"); if(!b) return;
+  if(CONFLICTS && CONFLICTS.length){
+    $("conflictNames").textContent = " " + CONFLICTS.join(", ");
+    b.hidden = false;
+  }else{
+    b.hidden = true;
+  }
+}
+$("conflictClose").addEventListener("click",()=>{ $("conflictBanner").hidden = true; });
+
+/* ---------- предупреждение о несохранении ---------- */
+function renderSaveError(){
+  const b=$("saveBanner"); if(!b) return;
+  const err=STATE.save_error||"";
+  b.hidden = !err;
+  if(err) $("saveErrText").textContent = " " + err;
+}
+$("saveErrBtn").addEventListener("click", ()=>{ if(api()) api().open_data_folder(); });
+
+/* ---------- интро (2 шага) ---------- */
+function revealApp(){
+  const intro=$("intro");
+  if(intro){ intro.classList.add("gone"); setTimeout(()=>intro.remove(),700); }
+  document.body.classList.remove("intro-active");
+  showApp();
+}
+function introGo(from, to){
+  $(from).classList.remove("active");
+  $(to).classList.add("active");
+}
+$("introTgBtn").addEventListener("click", async ()=>{
+  const b=$("introTgBtn"); b.classList.add("loading");
+  try{ if(api()) await api().open_external("https://t.me/mimidevil"); }catch(e){}
+  setTimeout(()=>{
+    b.classList.remove("loading");
+    introGo("introS1", "introTg");
+    showLinkedTg();          // вдруг аккаунт уже привязан с прошлого раза
+    $("tgIntroInput").focus();
+  }, 550);
+});
+
+/* ---------- шаг знакомства: привязка Telegram ---------- */
+function showLinkedTg(){
+  const s=(STATE.settings)||{};
+  if(!s.tg_username) return false;
+  $("tgIntroForm").hidden=true;
+  $("tgIntroCard").hidden=false;
+  $("tgIntroNext").hidden=false;
+  $("tgIntroSkip").hidden=true;
+  $("tgIntroName").textContent=s.tg_name || ("@"+s.tg_username);
+  $("tgIntroUser").textContent="@"+s.tg_username;
+  const av=$("tgIntroAvatar");
+  if(s.tg_avatar){ av.src=s.tg_avatar; av.hidden=false; } else { av.hidden=true; }
+  $("tgIntroSub").textContent=t("tg_intro_done");
+  return true;
+}
+async function linkFromIntro(){
+  const v=$("tgIntroInput").value.trim();
+  if(!v){ toast(t("tg_err_bad_username"), true); return; }
+  const b=$("tgIntroBtn"); b.classList.add("loading");
+  try{
+    const r=await api().link_telegram(v);
+    if(r.error){ toast(t("tg_err_"+r.error) || (t("err_generic")+r.error), true); return; }
+    STATE=r.state; renderProfile(); showLinkedTg();
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ b.classList.remove("loading"); }
+}
+$("tgIntroBtn").addEventListener("click", linkFromIntro);
+$("tgIntroInput").addEventListener("keydown",(e)=>{ if(e.key==="Enter") linkFromIntro(); });
+$("tgIntroSkip").addEventListener("click", ()=>introGo("introTg", "introS2"));
+$("tgIntroNext").addEventListener("click", ()=>introGo("introTg", "introS2"));
+
+$("introContinue").addEventListener("click", async ()=>{
+  try{ if(api()) STATE = await api().finish_intro(); }catch(e){}
+  revealApp();
+});
+
+/* ---------- внешние ссылки ---------- */
+document.addEventListener("click",(e)=>{
+  const el=e.target.closest("[data-ext]");
+  if(!el) return;
+  const u=el.getAttribute("data-ext");
+  if(api() && u) api().open_external(u);
+});
+
+/* ---------- ripple «капля на воде» ---------- */
+function spawnRipple(e, el){
+  const r=el.getBoundingClientRect();
+  const size=Math.max(r.width,r.height)*1.35;
+  const x=(e.clientX!=null?e.clientX:r.left+r.width/2)-r.left;
+  const y=(e.clientY!=null?e.clientY:r.top+r.height/2)-r.top;
+  const rip=document.createElement("span"); rip.className="ripple";
+  rip.style.width=rip.style.height=size+"px";
+  rip.style.left=(x-size/2)+"px"; rip.style.top=(y-size/2)+"px";
+  el.appendChild(rip);
+  setTimeout(()=>rip.remove(),880);
+}
+document.addEventListener("pointerdown",(e)=>{
+  const el=e.target.closest("button, .qlink, .server-card, .star");
+  if(!el) return;
+  const cs=getComputedStyle(el);
+  if(cs.position==="static") el.style.position="relative";
+  if(cs.overflow==="visible") el.style.overflow="hidden";
+  spawnRipple(e, el);
+});
+
+/* ============================ РЕЖИМЫ ============================ */
+function renderModes(){
+  const s=STATE.settings||{};
+  const proxy=s.system_proxy!==false, tun=!!s.tun_mode;
+  $("modeProxy").classList.toggle("on", proxy);
+  const tunTile=$("modeTun");
+  tunTile.classList.toggle("on", tun);
+  // пока состояние не загрузилось (null) плитку не гасим
+  tunTile.classList.toggle("locked", STATE.tun_found===false);
+  // «включён, но не поднялся» — самое частое недоразумение: тумблер горит,
+  // а трафик идёт мимо туннеля. Показываем это прямо на плитке.
+  const failed = tun && STATE.connected && STATE.tun_active===false;
+  tunTile.classList.toggle("failed", failed);
+  $("modeTunSub").textContent = failed ? t("mode_tun_failed")
+    : ((STATE.is_admin===false) ? t("mode_tun_admin") : t("mode_tun_sub"));
+  // баннер с предложением перезапуска показываем, только когда туннель нужен
+  const need = !!s.tun_mode && !STATE.is_admin;
+  $("adminBanner").hidden = !need;
+  if(!proxy && !tun && !STATE.connected) $("statusSub").textContent = t("mode_none");
+}
+async function toggleMode(which){
+  const s=STATE.settings||{};
+  const patch={proxy:s.system_proxy!==false, tun:!!s.tun_mode};
+  patch[which]=!patch[which];
+
+  if(which==="tun" && patch.tun){
+    // спрашиваем Python прямо сейчас, а не верим закешированному флагу:
+    // приложение могли открыть до того, как состояние догрузилось
+    try{ STATE = await api().get_state(); updateXrayStatus(); }catch(e){}
+    if(STATE.tun_found===false){ toast(t("tun_no"), true); return; }
+    if(STATE.is_admin===false){ $("adminBanner").hidden=false; toast(t("err_need_admin"), true); return; }
+  }
+  const r=await api().set_modes(patch);
+  if(r.error){
+    toast(r.error==="need_admin" ? t("err_need_admin") : t("err_generic")+r.error, true);
+  }
+  STATE=r.state||STATE;
+  renderModes(); updateConnectUI();
+}
+$("modeProxy").addEventListener("click", ()=>toggleMode("proxy"));
+$("modeTun").addEventListener("click", ()=>toggleMode("tun"));
+$("adminClose").addEventListener("click", ()=>{ $("adminBanner").hidden=true; });
+$("adminBtn").addEventListener("click", async ()=>{
+  const r=await api().request_admin();
+  if(r && r.error) toast(t("admin_denied"), true);
+});
+
+/* ============================ СЕРВЕРЫ ============================ */
+function renderServers(){
+  const list = $("serverList"); if(!list) return;
+  list.innerHTML = "";
+  if(!STATE.servers.length){
+    const e = document.createElement("div"); e.className="empty";
+    e.textContent = t("no_servers"); list.appendChild(e); return;
+  }
+  STATE.servers.forEach((sv,i)=>{
+    const card = document.createElement("div");
+    card.className = "server-card" + (i===STATE.selected ? " sel":"");
+    card.dataset.i = i;
+    const proto = (sv.protocol||"").toUpperCase().replace("SHADOWSOCKS","SS");
+    card.innerHTML =
+      `<span class="badge"></span>
+       <div class="s-meta"><div class="s-name"></div><div class="s-addr"></div></div>
+       <span class="ping-chip">— ms</span>
+       <button class="del-btn">✕</button>`;
+    card.querySelector(".badge").textContent = proto;
+    card.querySelector(".s-name").textContent = sv.name;
+    // транспорт показываем, только если он не обычный tcp — так видно xhttp/ws/grpc
+    const net = (sv.network||"tcp").toLowerCase();
+    card.querySelector(".s-addr").textContent =
+      sv.address + ":" + sv.port + (net && net!=="tcp" ? "  ·  " + net : "");
+    card.addEventListener("click",()=>selectServer(i));
+    card.querySelector(".del-btn").addEventListener("click",(e)=>{e.stopPropagation();delServer(i);});
+    list.appendChild(card);
+  });
+}
+async function selectServer(i){ STATE = await api().select_server(i); renderServers(); updateConnectUI(); renderProfile(); }
+async function delServer(i){ STATE = await api().delete_server(i); renderServers(); updateConnectUI(); renderProfile(); }
+
+/* ============================ ПРОФИЛЬ ============================ */
+function renderStars(n){
+  document.querySelectorAll("#rateStars .star").forEach((st,i)=>st.classList.toggle("on", i<n));
+}
+function renderTelegram(){
+  const s=STATE.settings||{};
+  const linked=!!s.tg_username;
+  $("tgLinked").hidden=!linked;
+  $("tgForm").hidden=linked;
+  if(linked){
+    $("tgName").textContent=s.tg_name||s.tg_username;
+    $("tgUser").textContent="@"+s.tg_username;
+    const av=$("tgAvatar");
+    if(s.tg_avatar){ av.src=s.tg_avatar; av.hidden=false; } else { av.hidden=true; }
+  }
+  // шапка профиля: телеграм важнее локального идентификатора
+  const name=$("profName"), role=$("profRole"), box=$("profAvatar");
+  if(linked){
+    name.textContent=s.tg_name||("@"+s.tg_username);
+    name.classList.remove("mono");
+    role.textContent="@"+s.tg_username;
+    if(s.tg_avatar){
+      box.innerHTML=""; box.classList.remove("ios-tile");
+      const img=document.createElement("img"); img.src=s.tg_avatar; img.alt="";
+      box.appendChild(img);
+    }
+  }else{
+    name.textContent=STATE.local_id||"LDK-0000";
+    name.classList.add("mono");
+    role.textContent=t("prof_role");
+  }
+}
+function renderSubscription(){
+  const sub=STATE.sub||{};
+  const ann=$("subAnnounce");
+  if(ann){
+    ann.textContent = sub.announce || "";
+    ann.hidden = !sub.announce;
+  }
+  const box=$("subUsage");
+  if(sub.total){
+    box.hidden=false;
+    $("subLeft").textContent=t("sub_left")+fmtBytes(sub.left||0);
+    $("subUsed").textContent=fmtBytes(sub.used||0)+t("sub_used_of")+fmtBytes(sub.total);
+    const bar=$("subBar");
+    bar.querySelector("i").style.width=Math.min(100, sub.percent||0)+"%";
+    bar.classList.toggle("low",(sub.percent||0)<3);
+  }else{
+    box.hidden=true;
+  }
+  const rowExp=$("rowExpire");
+  if(sub.expire){
+    rowExp.hidden=false;
+    $("pvExpire").textContent = sub.expired
+      ? t("sub_expired")
+      : fmtDate(sub.expire)+"  ·  "+t("sub_days")+sub.days_left;
+  }else{
+    rowExp.hidden = !sub.known;
+    if(sub.known) $("pvExpire").textContent=t("sub_forever");
+  }
+  const rowTr=$("rowTraffic");
+  if(sub.known){
+    rowTr.hidden=false;
+    $("pvTraffic").textContent = sub.total
+      ? fmtBytes(sub.used||0)+t("sub_used_of")+fmtBytes(sub.total)
+      : fmtBytes(sub.used||0)+"  ·  "+t("sub_unlimited");
+  }else{
+    rowTr.hidden=true;
+  }
+  const rowUp=$("rowUpdated");
+  rowUp.hidden=!sub.updated;
+  if(sub.updated) $("pvUpdated").textContent=fmtWhen(sub.updated);
+  $("refreshSubBtn").hidden = !(STATE.settings||{}).subscription_url;
+}
+function renderProfile(){
+  const s=STATE.settings||{};
+  const hasSub=!!(s.subscription_url);
+  const nServers=(STATE.servers||[]).length;
+  const active=hasSub || nServers>0;
+  const st=$("pvStatus");
+  if(st){ st.textContent=active?t("status_active"):t("status_none"); st.className="pv"+(active?" pv-on":""); }
+  if($("pvPlan")) $("pvPlan").textContent=t("plan_test");
+  if($("pvSource")) $("pvSource").textContent=hasSub?t("src_sub"):(nServers>0?t("src_manual"):t("src_none"));
+  if($("pvServers")) $("pvServers").textContent=String(nServers);
+  renderStars(STATE.rating||0);
+  renderTelegram();
+  renderSubscription();
+}
+document.querySelectorAll("#rateStars .star").forEach(st=>{
+  st.addEventListener("click", async ()=>{
+    const v=parseInt(st.dataset.v)||0; renderStars(v);
+    if(api()) STATE=await api().set_rating(v);
+  });
+});
+$("tgLinkBtn").addEventListener("click", async ()=>{
+  const v=$("tgInput").value.trim();
+  if(!v){ toast(t("tg_err_bad_username"), true); return; }
+  const btn=$("tgLinkBtn"); btn.disabled=true; const old=btn.textContent; btn.textContent=t("tg_linking");
+  try{
+    const r=await api().link_telegram(v);
+    if(r.error){ toast(t("tg_err_"+r.error) || t("err_generic")+r.error, true); return; }
+    STATE=r.state; $("tgInput").value=""; renderProfile(); toast(t("tg_ok"));
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+});
+$("tgUnlinkBtn").addEventListener("click", async ()=>{
+  const r=await api().unlink_telegram();
+  STATE=r.state||STATE;
+  // аватарку-заглушку возвращаем перезагрузкой разметки плитки
+  const box=$("profAvatar");
+  box.classList.add("ios-tile");
+  box.innerHTML='<span class="glow"></span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/><path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/><path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/><path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/></svg>';
+  renderProfile();
+});
+$("refreshSubBtn").addEventListener("click", async ()=>{
+  const btn=$("refreshSubBtn"); btn.disabled=true; const old=btn.textContent;
+  btn.textContent=t("sub_loading");
+  try{
+    const r=await api().refresh_subscription();
+    if(r.error){ toast((I18N[LANG]["err_"+r.error]) || (t("err_generic")+r.error), true); return; }
+    STATE=r.state; renderServers(); renderProfile(); updateConnectUI(); toast(t("sub_refreshed"));
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+});
+
+/* ============================ ПОДКЛЮЧЕНИЕ ============================ */
+function updateConnectUI(){
+  const dot=$("statusDot"), title=$("statusTitle"), sub=$("statusSub"), btn=$("connectBtn");
+  if(!btn) return;
+  const sv = (STATE.selected>=0 && STATE.servers[STATE.selected]) ? STATE.servers[STATE.selected] : null;
+  if(STATE.connected){
+    dot.className="status-dot on"; title.textContent=t("connected");
+    btn.textContent=t("disconnect"); btn.className="connect-btn connected";
+  }else{
+    dot.className="status-dot"; title.textContent=t("disconnected");
+    btn.textContent=t("connect"); btn.className="connect-btn";
+    sub.textContent = sv ? (t("selected_pfx")+sv.name) : t("pick_server");
+    $("speedBox").classList.remove("live");
+    $("spUp").textContent=fmtSpeed(0); $("spDown").textContent=fmtSpeed(0);
+  }
+}
+function startUptime(){
+  uptimeStart=Date.now(); clearInterval(uptimeTimer);
+  uptimeTimer=setInterval(()=>{
+    if(!STATE.connected){clearInterval(uptimeTimer);return;}
+    const s=Math.floor((Date.now()-uptimeStart)/1000);
+    const hh=String(Math.floor(s/3600)).padStart(2,"0");
+    const mm=String(Math.floor(s%3600/60)).padStart(2,"0");
+    const ss=String(s%60).padStart(2,"0");
+    const sv=STATE.servers[STATE.selected];
+    $("statusSub").textContent=(sv?sv.name:"")+"   ·   "+hh+":"+mm+":"+ss;
+  },1000);
+}
+$("connectBtn").addEventListener("click", async ()=>{
+  const btn=$("connectBtn");
+  if(STATE.connected){
+    const r=await api().disconnect();
+    STATE=r.state||STATE; updateConnectUI(); return;
+  }
+  if(STATE.selected<0){ toast(t("select_first"),true); return; }
+  if(CONFLICTS && CONFLICTS.length){ toast(t("conflict_warn")+CONFLICTS.join(", "),true); }
+  btn.className="connect-btn connecting"; btn.textContent=t("connecting");
+  $("statusDot").className="status-dot wait"; $("statusTitle").textContent=t("connecting");
+  const r=await api().connect(STATE.selected);
+  if(r.error){
+    const known=I18N[LANG]["err_"+r.error];
+    toast(known || (t("err_generic")+r.error), true);
+    if(r.error==="need_admin") $("adminBanner").hidden=false;
+    updateConnectUI(); return;
+  }
+  STATE=r.state; updateConnectUI(); startUptime(); renderModes();
+});
+
+/* ---------- скорость ---------- */
+window.__pushSpeed=(up,down)=>{
+  $("spUp").textContent=fmtSpeed(up);
+  $("spDown").textContent=fmtSpeed(down);
+  $("speedBox").classList.toggle("live",(up+down)>0);
+};
+
+/* ---------- пинг ---------- */
+$("pingBtn").addEventListener("click", async ()=>{
+  document.querySelectorAll(".ping-chip").forEach(c=>{c.textContent="…";c.className="ping-chip";});
+  await api().ping_all();
+});
+window.__pushPing=(i,ms)=>{
+  const chip=document.querySelector(`.server-card[data-i="${i}"] .ping-chip`);
+  if(!chip) return;
+  if(ms<0){chip.textContent="timeout";chip.className="ping-chip bad";}
+  else{chip.textContent=ms+" ms";chip.className="ping-chip "+(ms<200?"good":(ms<500?"mid":"bad"));}
+};
+
+/* подсказка от ядра: показываем заметно, а не строчкой в логах */
+window.__pushHint=(text)=>{ toast(text, true); };
+
+/* ---------- логи ---------- */
+window.__pushLog=(line)=>{
+  const box=$("logBox"); if(!box) return;
+  const d=document.createElement("div"); d.className="log-line"; d.textContent=line;
+  box.appendChild(d);
+  while(box.childElementCount>600) box.removeChild(box.firstChild);
+  box.scrollTop=box.scrollHeight;
+};
+$("clearLogs").addEventListener("click",()=>{ $("logBox").innerHTML=""; });
+
+/* ---------- добавление ---------- */
+$("addBtn").addEventListener("click", async ()=>{
+  const txt=$("linksBox").value;
+  const r=await api().add_links(txt);
+  if(!r.added){ toast(t("err_no_links"),true); return; }
+  STATE=r.state; $("linksBox").value=""; renderServers(); updateConnectUI(); renderProfile();
+  switchTab("servers"); toast(t("added")+r.added);
+});
+$("subBtn").addEventListener("click", async ()=>{
+  const url=$("subBox").value;
+  const btn=$("subBtn"); btn.disabled=true; const old=btn.textContent; btn.textContent=t("sub_loading");
+  toast(t("sub_loading"));
+  try{
+    const r=await api().import_subscription(url);
+    if(r.error){ toast((I18N[LANG]["err_"+r.error]) || (t("err_generic")+r.error), true); return; }
+    STATE=r.state; renderServers(); updateConnectUI(); renderProfile();
+    switchTab("servers"); toast(t("sub_loaded")+r.added);
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+});
+
+/* ============================ МАРШРУТЫ ============================ */
+function explainMode(){
+  const active=document.querySelector("#routeSeg button.active");
+  const el=$("routeExplain");
+  if(el && active) el.textContent = t("route_"+active.dataset.mode+"_x");
+}
+function renderRoutes(){
+  const s=STATE.settings||{};
+  const mode=s.route_mode||"global";
+  document.querySelectorAll("#routeSeg button").forEach(b=>
+    b.classList.toggle("active", b.dataset.mode===mode));
+  $("directBox").value=(s.direct_sites||[]).join("\n");
+  $("blockBox").value=(s.block_sites||[]).join("\n");
+  explainMode();
+}
+document.querySelectorAll("#routeSeg button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll("#routeSeg button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    explainMode();
+  });
+});
+$("saveRoutesBtn").addEventListener("click", async ()=>{
+  const active=document.querySelector("#routeSeg button.active");
+  const btn=$("saveRoutesBtn"); btn.disabled=true;
+  try{
+    const r=await api().save_routing({
+      mode: active ? active.dataset.mode : "global",
+      direct: $("directBox").value,
+      block: $("blockBox").value
+    });
+    STATE=r.state||STATE; renderRoutes(); toast(t("route_saved"));
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ btn.disabled=false; }
+});
+
+/* ============================ НАСТРОЙКИ ============================ */
+function fillSettings(){
+  const s=STATE.settings||{};
+  $("setSocks").value=s.socks_port ?? 10808;
+  $("setHttp").value=s.http_port ?? 10809;
+  $("setTray").checked=s.minimize_to_tray!==false;
+  $("setStartMin").checked=!!s.start_minimized;
+  $("setPrio").checked=!!s.high_priority;
+  $("setDns").value=s.tun_dns || "1.1.1.1";
+  $("setXray").value=s.xray_path || "";
+  $("dataDirText").textContent=(STATE.data_dir||"")+" — "+t("diag_hint");
+}
+function updateXrayStatus(){
+  // null = состояние ещё не пришло из Python; молчим, а не пугаем «не найдено»
+  const line=(el, ok, okKey, noKey)=>{
+    if(!el) return;
+    if(ok===null || ok===undefined){ el.textContent=""; el.className="xray-status"; return; }
+    el.textContent = ok ? t(okKey) : t(noKey);
+    el.className = "xray-status " + (ok ? "xray-ok":"xray-no");
+  };
+  line($("xrayStatus"), STATE.xray_found, "xray_ok", "xray_no");
+  line($("tunStatus"),  STATE.tun_found,  "tun_ok",  "tun_no");
+}
+$("saveBtn").addEventListener("click", async ()=>{
+  const patch={
+    socks_port:parseInt($("setSocks").value)||10808,
+    http_port:parseInt($("setHttp").value)||10809,
+    minimize_to_tray:$("setTray").checked,
+    start_minimized:$("setStartMin").checked,
+    high_priority:$("setPrio").checked,
+    tun_dns:$("setDns").value.trim()||"1.1.1.1",
+    xray_path:$("setXray").value.trim(),
+    theme:THEME, lang:LANG
+  };
+  STATE=await api().save_settings(patch);
+  updateXrayStatus(); renderSaveError();
+  toast(STATE.saved===false ? t("save_failed") : t("saved"), STATE.saved===false);
+});
+$("openDataBtn").addEventListener("click", ()=>{ if(api()) api().open_data_folder(); });
+
+/* ---------- табы ---------- */
+async function switchTab(name){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));
+  if(name==="profile") renderProfile();
+  if(name==="routes") renderRoutes();
+  if(name==="settings"){
+    // перечитываем: ядро и tun2socks могли положить рядом уже после запуска
+    try{ if(api()){ STATE = await api().get_state(); fillSettings(); renderModes(); } }catch(e){}
+    updateXrayStatus();
+  }
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+
+/* ---------- тема / язык ---------- */
+$("themeBtn").addEventListener("click", async ()=>{
+  THEME = THEME==="auto" ? "light" : (THEME==="light" ? "dark" : "auto");
+  applyTheme();
+  if(api()) STATE=await api().save_settings({theme:THEME});
+});
+document.querySelectorAll(".lang-toggle button").forEach(b=>
+  b.addEventListener("click", async ()=>{
+    applyLang(b.dataset.lang);
+    if(api()) STATE=await api().save_settings({lang:b.dataset.lang});
+  }));
+
+/* ---------- тост ---------- */
+let toastTimer=null;
+function toast(msg,isErr){
+  const el=$("toast"); el.textContent=msg;
+  el.className="toast show"+(isErr?" err":"");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className="toast"+(isErr?" err":"");},3200);
+}
+
+/* ---------- старт ---------- */
+applyTheme(); applyLang("ru");
+if(window.pywebview && window.pywebview.api) init();
+else window.addEventListener("pywebviewready", init);
+</script>
+</body>
+</html>
