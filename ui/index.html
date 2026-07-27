@@ -493,6 +493,89 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 .hub-text p:last-child{margin-bottom:0; color:var(--text);}
 #introContinue{margin-top:34px; min-width:260px;}
 
+/* ==================== КАСТОМНЫЙ ФОН ==================== */
+body.has-bg{
+  background-image:var(--bg-img); background-size:cover; background-position:center;
+  background-attachment:fixed;
+}
+body.has-bg::before{opacity:.4;}
+body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
+body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
+body.has-bg .banner{background:rgba(5,5,5,.55); backdrop-filter:blur(18px) saturate(130%);
+  -webkit-backdrop-filter:blur(18px) saturate(130%);}
+body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
+body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
+body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
+body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast,
+body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
+
+/* ==================== ТУТОРИАЛ (6 шагов) ==================== */
+.tutorial-overlay{position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.72);
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center;}
+.tutorial-overlay.active{display:flex;}
+.tutorial-highlight{position:fixed; z-index:301; border:2px solid var(--text); border-radius:16px;
+  box-shadow:0 0 0 4000px rgba(0,0,0,.65); pointer-events:none; transition:all .45s var(--ease);}
+.tutorial-tooltip{position:fixed; z-index:302; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:22px 26px; max-width:380px; box-shadow:var(--shadow);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
+.tutorial-tooltip h3{margin:0 0 8px; font-size:16px; font-weight:700;}
+.tutorial-tooltip p{margin:0 0 16px; font-size:13.5px; color:var(--muted); line-height:1.5;}
+.tutorial-tooltip .btn-row{justify-content:flex-end;}
+.tutorial-tooltip .btn-row button{padding:9px 18px; font-size:13px;}
+.tutorial-skip{position:fixed; z-index:302; top:20px; right:20px; border:0; background:transparent;
+  color:var(--muted); cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:650;
+  padding:8px 14px; border-radius:var(--pill); transition:.25s var(--ease);}
+.tutorial-skip:hover{color:var(--text);}
+.tutorial-progress{display:flex; gap:6px; margin-bottom:14px;}
+.tutorial-progress span{width:8px; height:8px; border-radius:50%; background:var(--border); transition:.3s var(--ease);}
+.tutorial-progress span.done{background:var(--text);}
+
+/* ==================== НОВОСТИ ==================== */
+.tab .news-pulse{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--text);
+  margin-left:5px; animation:newsPulse 1.5s ease-in-out infinite;}
+@keyframes newsPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.news-header{display:flex; align-items:center; justify-content:space-between; padding:0 0 14px; border-bottom:1px solid var(--border); margin-bottom:16px;}
+.news-header-left{display:flex; align-items:center; gap:10px;}
+.news-header-left svg{width:20px; height:20px; fill:var(--text);}
+.news-header-left span{font-weight:700; font-size:15px;}
+.news-header-right{display:flex; align-items:center; gap:10px;}
+.news-header-right label{font-size:13px; color:var(--muted); cursor:pointer;}
+.news-feed{display:flex; flex-direction:column; gap:14px;}
+.news-post{padding:16px 18px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
+  box-shadow:inset 0 1px 0 var(--specular);}
+.news-post-body{font-size:14px; line-height:1.65; color:var(--text);}
+.news-post-body a{color:var(--text); text-decoration:underline; text-underline-offset:2px;}
+.news-post-body b, .news-post-body strong{font-weight:700;}
+.news-post-body i, .news-post-body em{font-style:italic; color:var(--muted);}
+.news-post-body s{text-decoration:line-through; opacity:.65;}
+.news-post-body code{background:var(--field); padding:2px 6px; border-radius:6px; font-family:ui-monospace,Consolas,monospace; font-size:13px;}
+.news-post-body pre{background:var(--field); padding:12px 14px; border-radius:12px; overflow-x:auto; font-family:ui-monospace,Consolas,monospace; font-size:12.5px; line-height:1.5; margin:10px 0;}
+.news-post-body blockquote{border-left:3px solid var(--text); padding:8px 14px; margin:10px 0; color:var(--muted); font-style:italic;}
+.news-post-body .spoiler{background:var(--text); color:var(--text); padding:1px 4px; border-radius:4px; cursor:pointer; transition:.2s;}
+.news-post-body .spoiler:hover{background:transparent; color:var(--text);}
+.news-date{margin-top:10px; font-size:12px; color:var(--muted);}
+.news-empty{color:var(--muted); text-align:center; padding:40px 20px; font-size:14px;}
+
+/* ==================== НАСТРОЙКИ: ФОН/ЦВЕТА/ШРИФТ ==================== */
+.color-pick-row{display:flex; align-items:center; gap:10px; padding:8px 0;}
+.color-pick-row label{font-size:13px; min-width:100px;}
+.color-pick-row input[type=color]{width:36px; height:36px; border:1px solid var(--border); border-radius:10px;
+  background:var(--field); cursor:pointer; padding:2px;}
+.font-row{display:flex; align-items:center; gap:10px; padding:8px 0;}
+.font-row input[type=file]{display:none;}
+.font-row .btn{margin-top:0; padding:8px 14px; font-size:12.5px;}
+.font-preview{font-size:16px; margin-top:8px; padding:8px; background:var(--field); border-radius:10px;
+  border:1px solid var(--border); text-align:center;}
+
+/* ==================== ПОЛЬЗОВАТЕЛЬСКИЙ ШРИФТ ==================== */
+
+/* ==================== ПОВТОР ТУТОРИАЛА ==================== */
+.tutorial-repeat{display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--border);}
+.tutorial-repeat:last-of-type{border-bottom:0;}
+
+/* ==================== ИНФО О СБОРКЕ ==================== */
+.build-info{text-align:center; padding:16px 0 4px; font-size:12px; color:var(--muted); opacity:.6;}
+
 /* пользователь просит меньше движения — уважаем */
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:.001s!important; animation-iteration-count:1!important; transition-duration:.15s!important;}
@@ -575,6 +658,20 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
         <p data-i18n="hub_p3"></p>
       </div>
       <button class="intro-btn" id="introContinue"><span class="lbl" data-i18n="hub_continue"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ ТУТОРИАЛ ============================ -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-highlight" id="tutorialHighlight"></div>
+  <div class="tutorial-tooltip" id="tutorialTooltip">
+    <div class="tutorial-progress" id="tutorialProgress"></div>
+    <h3 id="tutorialTitle"></h3>
+    <p id="tutorialDesc"></p>
+    <div class="btn-row">
+      <button class="btn ghost" id="tutorialSkipBtn" data-i18n="tutorial_skip"></button>
+      <button class="btn" id="tutorialNextBtn" data-i18n="tutorial_next"></button>
     </div>
   </div>
 </div>
@@ -666,9 +763,9 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
       <span class="q-tx"><b data-i18n="ql_connect"></b><i data-i18n="ql_connect_sub"></i></span>
       <span class="q-arrow">→</span>
     </button>
-    <button class="qlink" data-ext="https://t.me/ledokolmoderatorbot">
-      <span class="q-ic"><svg viewBox="0 0 24 24"><path d="M12 2.6l1.9 4.4 4.8.4-3.65 3.16 1.1 4.7L12 17.2l-4.15 2.46 1.1-4.7L5.3 7.8l4.8-.4z"/></svg></span>
-      <span class="q-tx"><b data-i18n="ql_ai"></b><i data-i18n="ql_ai_sub"></i></span>
+    <button class="qlink" data-ext="https://t.me/LEDOKOL_CHANNEL">
+      <span class="q-ic"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></span>
+      <span class="q-tx"><b data-i18n="ql_news"></b><i data-i18n="ql_news_sub"></i></span>
       <span class="q-arrow">→</span>
     </button>
   </section>
@@ -679,6 +776,7 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
     <button class="tab" data-tab="add" data-i18n="tab_add"></button>
     <button class="tab" data-tab="routes" data-i18n="tab_routes"></button>
     <button class="tab" data-tab="settings" data-i18n="tab_settings"></button>
+    <button class="tab" data-tab="news" data-i18n="tab_news"></button>
     <button class="tab" data-tab="logs" data-i18n="tab_logs"></button>
     <span class="spacer"></span>
     <button class="ping-btn" id="pingBtn" data-i18n="ping_all"></button>
@@ -828,12 +926,65 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
         <button class="btn" id="saveBtn" data-i18n="save_btn"></button>
         <div class="xray-status" id="xrayStatus"></div>
         <div class="xray-status" id="tunStatus"></div>
+        <div class="build-info" id="buildInfo"></div>
+      </div>
+      <div class="card">
+        <h3 data-i18n="settings_bg"></h3>
+        <p class="hint" data-i18n="settings_bg_hint"></p>
+        <div class="btn-row">
+          <label class="btn ghost" for="bgUploadInput" style="cursor:pointer" data-i18n="settings_bg_upload"></label>
+          <input type="file" id="bgUploadInput" accept="image/*" style="display:none">
+          <button class="btn ghost" id="bgRemoveBtn" data-i18n="settings_bg_remove" style="display:none"></button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 data-i18n="settings_colors"></h3>
+        <div class="color-pick-row"><label data-i18n="color_bg"></label><input type="color" id="colorBg"></div>
+        <div class="color-pick-row"><label data-i18n="color_text"></label><input type="color" id="colorText"></div>
+        <div class="color-pick-row"><label data-i18n="color_accent"></label><input type="color" id="colorAccent"></div>
+        <div class="color-pick-row"><label data-i18n="color_surface"></label><input type="color" id="colorSurface"></div>
+        <button class="btn" id="applyColorsBtn" data-i18n="settings_apply_colors"></button>
+      </div>
+      <div class="card">
+        <h3 data-i18n="settings_font"></h3>
+        <p class="hint" data-i18n="settings_font_hint"></p>
+        <div class="font-row">
+          <label class="btn ghost" for="fontUploadInput" style="cursor:pointer" data-i18n="settings_font_upload"></label>
+          <input type="file" id="fontUploadInput" accept=".ttf" style="display:none">
+          <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
+        </div>
+        <div class="font-preview" id="fontPreview" hidden>Пример шрифта AaBbCc 123</div>
+      </div>
+      <div class="card">
+        <div class="tutorial-repeat">
+          <span class="lbl"><span data-i18n="settings_tutorial"></span><i data-i18n="settings_tutorial_hint"></i></span>
+          <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
+        </div>
       </div>
       <div class="card">
         <h3 data-i18n="diag_title"></h3>
         <p class="hint" id="dataDirText"></p>
         <div class="btn-row">
           <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= НОВОСТИ ======================= -->
+    <section class="panel" id="panel-news">
+      <div class="card">
+        <div class="news-header">
+          <div class="news-header-left">
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            <span data-i18n="news_channel"></span>
+          </div>
+          <div class="news-header-right">
+            <label for="newsOffToggle" data-i18n="news_notifications"></label>
+            <label class="switch"><input type="checkbox" id="newsOffToggle"><span class="track"></span></label>
+          </div>
+        </div>
+        <div class="news-feed" id="newsFeed">
+          <div class="news-empty" data-i18n="news_loading"></div>
         </div>
       </div>
     </section>
@@ -930,7 +1081,29 @@ const I18N = {
     hub_p1:"Это клиент Ledokol VPN. Здесь вы подключаетесь к своим серверам, проверяете задержку и управляете соединением в пару касаний.",
     hub_p2:"Режим «Прокси» направит в VPN браузеры и программы, а «Туннель» — вообще весь трафик системы. Можно включить оба сразу.",
     hub_p3:"Чтобы начать — добавьте свой ключ или подписку во вкладке «Добавить». Приятного пользования!",
-    hub_continue:"Продолжить"
+    hub_continue:"Продолжить",
+    ql_news:"Новости", ql_news_sub:"Канал Ledokol",
+    tab_news:"Новости", news_channel:"Новости", news_loading:"Загрузка…",
+    news_no_posts:"Нет постов", news_notifications:"Уведомления",
+    tutorial_skip:"Пропустить", tutorial_next:"Далее",
+    tutorial_step1:"Серверы", tutorial_step1_d:"Здесь отображается список ваших серверов. Нажмите на сервер, чтобы выбрать его.",
+    tutorial_step2:"Подключение", tutorial_step2_d:"Нажмите «Подключиться» для Establish VPN connection с выбранным сервером.",
+    tutorial_step3:"Режимы", tutorial_step3_d:"«Прокси» — для браузеров. «Туннель» — для всего трафика системы.",
+    tutorial_step4:"Маршруты", tutorial_step4_d:"Настройте, какие сайты идут через VPN, а какие — напрямую.",
+    tutorial_step5:"Настройки", tutorial_step5_d:"Порты, приоритет, шрифты, фон и другие настройки.",
+    tutorial_step6:"Логи", tutorial_step6_d:"Если что-то не работает — здесь будет причина.",
+    err_tutorial_hint:"Пройдите туториал, чтобы разобраться с интерфейсом",
+    err_html_response:"Панель вернула HTML-страницу вместо данных подписки. Проверьте ссылку.",
+    err_ssl_error:"Ошибка SSL-сертификата. Попробуйте обновить сертификаты или проверьте настройки сети.",
+    settings_bg:"Фон", settings_bg_hint:"Загрузите изображение для фона приложения",
+    settings_bg_upload:"Загрузить фон", settings_bg_remove:"Удалить фон",
+    settings_colors:"Цвета", settings_apply_colors:"Применить",
+    color_bg:"Фон", color_text:"Текст", color_accent:"Акцент", color_surface:"Поверхность",
+    settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
+    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт",
+    settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
+    settings_tutorial_repeat:"Повторить",
+    settings_build:"Сборка"
   },
   en:{
     disconnected:"Disconnected", connected:"Connected", connecting:"Connecting…",
@@ -1007,7 +1180,29 @@ const I18N = {
     hub_p1:"This is the Ledokol VPN client. Connect to your servers, check latency and manage the connection in a couple of taps.",
     hub_p2:"Proxy mode sends browsers and apps through the VPN, Tunnel mode covers all system traffic. You can enable both.",
     hub_p3:"To get started, add your key or subscription in the “Add” tab. Enjoy!",
-    hub_continue:"Continue"
+    hub_continue:"Continue",
+    ql_news:"News", ql_news_sub:"Ledokol channel",
+    tab_news:"News", news_channel:"News", news_loading:"Loading…",
+    news_no_posts:"No posts yet", news_notifications:"Notifications",
+    tutorial_skip:"Skip", tutorial_next:"Next",
+    tutorial_step1:"Servers", tutorial_step1_d:"Your server list is shown here. Tap a server to select it.",
+    tutorial_step2:"Connect", tutorial_step2_d:"Press \"Connect\" to establish a VPN connection with the selected server.",
+    tutorial_step3:"Modes", tutorial_step3_d:"\"Proxy\" — for browsers. \"Tunnel\" — for all system traffic.",
+    tutorial_step4:"Routing", tutorial_step4_d:"Configure which sites go through the VPN and which go directly.",
+    tutorial_step5:"Settings", tutorial_step5_d:"Ports, priority, fonts, background and other options.",
+    tutorial_step6:"Logs", tutorial_step6_d:"If something does not work — the reason will be here.",
+    err_tutorial_hint:"Complete the tutorial to learn the interface",
+    err_html_response:"The panel returned an HTML page instead of subscription data. Check the link.",
+    err_ssl_error:"SSL certificate error. Try updating certificates or check your network settings.",
+    settings_bg:"Background", settings_bg_hint:"Upload an image for the app background",
+    settings_bg_upload:"Upload background", settings_bg_remove:"Remove background",
+    settings_colors:"Colors", settings_apply_colors:"Apply",
+    color_bg:"Background", color_text:"Text", color_accent:"Accent", color_surface:"Surface",
+    settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
+    settings_font_upload:"Upload font", settings_font_remove:"Remove font",
+    settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
+    settings_tutorial_repeat:"Repeat",
+    settings_build:"Build"
   }
 };
 let LANG = "ru";
@@ -1640,11 +1835,20 @@ async function switchTab(name){
     try{ if(api()){ STATE = await api().get_state(); fillSettings(); renderModes(); } }catch(e){}
     updateXrayStatus();
   }
+  if(name==="news"){
+    checkNews();
+    // убираем пульс
+    const tab=document.querySelector('.tab[data-tab="news"]');
+    if(tab){const p=tab.querySelector(".news-pulse");if(p)p.remove();}
+  }
 }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
 
 /* ---------- тема / язык ---------- */
 $("themeBtn").addEventListener("click", async ()=>{
+  if(document.body.classList.contains("has-bg")){
+    toast(t("theme_bg_locked"),true); return;
+  }
   THEME = THEME==="auto" ? "light" : (THEME==="light" ? "dark" : "auto");
   applyTheme();
   if(api()) STATE=await api().save_settings({theme:THEME});
@@ -1666,8 +1870,282 @@ function toast(msg,isErr){
 
 /* ---------- старт ---------- */
 applyTheme(); applyLang("ru");
-if(window.pywebview && window.pywebview.api) init();
-else window.addEventListener("pywebviewready", init);
+
+/* ============================ ТУТОРИАЛ ============================ */
+const TUTORIAL_STEPS=[
+  {target:".server-list",title:"tutorial_step1",desc:"tutorial_step1_d"},
+  {target:"#connectBtn",title:"tutorial_step2",desc:"tutorial_step2_d"},
+  {target:".modes",title:"tutorial_step3",desc:"tutorial_step3_d"},
+  {target:"#panel-routes",title:"tutorial_step4",desc:"tutorial_step4_d"},
+  {target:"#panel-settings",title:"tutorial_step5",desc:"tutorial_step5_d"},
+  {target:"#panel-logs",title:"tutorial_step6",desc:"tutorial_step6_d"}
+];
+let _tutStep=0;
+function startTutorial(){
+  _tutStep=0;
+  $("tutorialOverlay").classList.add("active");
+  renderTutorialStep();
+}
+function renderTutorialStep(){
+  const steps=TUTORIAL_STEPS, el=$("tutorialOverlay");
+  if(_tutStep>=steps.length){el.classList.remove("active");return;}
+  const s=steps[_tutStep];
+  const prog=$("tutorialProgress");
+  prog.innerHTML=steps.map((_,i)=>`<span class="${i<_tutStep?'done':''}"></span>`).join("");
+  $("tutorialTitle").textContent=t(s.title);
+  $("tutorialDesc").textContent=t(s.desc);
+  $("tutorialNextBtn").textContent=_tutStep<steps.length-1?t("tutorial_next"):"✓";
+  // highlight target
+  const tgt=document.querySelector(s.target);
+  const hl=$("tutorialHighlight"), tt=$("tutorialTooltip");
+  if(tgt){
+    const r=tgt.getBoundingClientRect();
+    hl.style.display="block";
+    hl.style.left=Math.max(0,r.left-6)+"px"; hl.style.top=Math.max(0,r.top-6)+"px";
+    hl.style.width=Math.min(r.width+12,window.innerWidth)+"px";
+    hl.style.height=Math.min(r.height+12,window.innerHeight)+"px";
+    // tooltip below or above
+    let ttTop=r.bottom+16;
+    if(ttTop+200>window.innerHeight) ttTop=Math.max(10,r.top-220);
+    tt.style.top=ttTop+"px";
+    tt.style.left=Math.max(10,Math.min(r.left,window.innerWidth-400))+"px";
+  }
+}
+$("tutorialNextBtn").addEventListener("click",()=>{ _tutStep++; renderTutorialStep(); });
+$("tutorialSkipBtn").addEventListener("click",()=>{ $("tutorialOverlay").classList.remove("active"); });
+$("repeatTutorialBtn").addEventListener("click", async ()=>{
+  if(api()) await api().reset_tutorial();
+  startTutorial();
+});
+
+/* ============================ НОВОСТИ ============================ */
+let _newsDisabled=false, _newsPostId="";
+async function checkNews(){
+  if(!api()) return;
+  try{
+    const r=await api().get_news();
+    if(!r||!r.ok) return;
+    _newsDisabled=!!r.disabled;
+    $("newsOffToggle").checked=_newsDisabled;
+    if(!r.html){
+      $("newsFeed").innerHTML=`<div class="news-empty">${t("news_no_posts")}</div>`;
+      return;
+    }
+    renderNews(r.html, r.date, r.post_id);
+    if(r.post_id && r.post_id!==_newsPostId && _newsPostId){
+      const tab=document.querySelector('.tab[data-tab="news"]');
+      if(tab && !tab.classList.contains("active")){
+        if(!tab.querySelector(".news-pulse")){
+          const p=document.createElement("span");p.className="news-pulse";tab.appendChild(p);
+        }
+      }
+    }
+    _newsPostId=r.post_id||"";
+    if(api()) STATE=await api().save_settings({last_news_id:_newsPostId||""});
+  }catch(e){}
+}
+function renderNews(html, date, postId){
+  let dateStr="";
+  if(date){
+    try{const d=new Date(date);dateStr=d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){dateStr=date;}
+  }
+  $("newsFeed").innerHTML=`<div class="news-post"><div class="news-post-body">${html}</div>${dateStr?`<div class="news-date">${dateStr}</div>`:''}</div>`;
+}
+$("newsOffToggle").addEventListener("change", async ()=>{
+  _newsDisabled=$("newsOffToggle").checked;
+  if(api()) STATE=await api().save_settings({news_off:_newsDisabled});
+});
+
+/* ============================ КАСТОМНЫЙ ФОН ============================ */
+async function loadBg(){
+  if(!api()) return;
+  try{
+    const r=await api().get_background();
+    if(r&&r.data){
+      document.body.style.setProperty("--bg-img","url(data:image/png;base64,"+r.data+")");
+      document.body.classList.add("has-bg");
+      if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
+      enforceThemeForBg();
+    }
+  }catch(e){}
+}
+$("bgUploadInput").addEventListener("change", async (e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    const b64=reader.result.split(",")[1];
+    if(api()){
+      const r=await api().upload_background(b64);
+      if(r&&r.ok){
+        document.body.style.setProperty("--bg-img","url(data:image/png;base64,"+b64+")");
+        document.body.classList.add("has-bg");
+        STATE=r.state||STATE;
+        if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
+        enforceThemeForBg();
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+});
+$("bgRemoveBtn").addEventListener("click", async ()=>{
+  if(api()){
+    const r=await api().remove_background();
+    STATE=r.state||STATE;
+  }
+  document.body.style.removeProperty("--bg-img");
+  document.body.classList.remove("has-bg");
+  if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="none";
+});
+
+/* ==================== ТЕМА + ФОН: блокировка ==================== */
+function enforceThemeForBg(){
+  if(document.body.classList.contains("has-bg")){
+    if(THEME!=="dark"){
+      THEME="dark"; applyTheme();
+      if(api()) api().save_settings({theme:THEME});
+    }
+  }
+}
+
+/* ============================ КАСТОМНЫЕ ЦВЕТА ============================ */
+function loadColorPickers(){
+  const s=STATE.settings||{};
+  if(s.custom_bg) $("colorBg").value=s.custom_bg;
+  if(s.custom_text) $("colorText").value=s.custom_text;
+  if(s.custom_accent) $("colorAccent").value=s.custom_accent;
+  if(s.custom_surface) $("colorSurface").value=s.custom_surface;
+  applyCustomColors();
+}
+function applyCustomColors(){
+  const root=document.documentElement;
+  const bg=$("colorBg").value, txt=$("colorText").value, acc=$("colorAccent").value, surf=$("colorSurface").value;
+  if(bg) root.style.setProperty("--bg",bg);
+  if(txt){root.style.setProperty("--text",txt);root.style.setProperty("--btn-fg",bg);}
+  if(acc) root.style.setProperty("--btn-bg",acc);
+  if(surf) root.style.setProperty("--surface-2",surf);
+}
+$("applyColorsBtn").addEventListener("click", async ()=>{
+  applyCustomColors();
+  if(api()){
+    STATE=await api().save_settings({
+      custom_bg:$("colorBg").value, custom_text:$("colorText").value,
+      custom_accent:$("colorAccent").value, custom_surface:$("colorSurface").value
+    });
+  }
+  toast(t("saved"));
+});
+
+/* ============================ КАСТОМНЫЙ ШРИФТ ============================ */
+async function loadFont(){
+  if(!api()) return;
+  try{
+    const s=STATE.settings||{};
+    if(!s.has_custom_font) return;
+    const r=await api().get_font();
+    if(r&&r.data){
+      injectFont(r.data);
+      if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
+      if($("fontPreview")) $("fontPreview").hidden=false;
+    }
+  }catch(e){}
+}
+function injectFont(b64){
+  let el=document.getElementById("customFontStyle");
+  if(!el){el=document.createElement("style");el.id="customFontStyle";document.head.appendChild(el);}
+  el.textContent=`@font-face{font-family:'CustomUserFont';src:url(data:font/ttf;base64,${b64}) format('truetype');font-display:swap;} body{font-family:'CustomUserFont',inherit!important;}`;
+}
+$("fontUploadInput").addEventListener("change", async (e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  if(file.size>20*1024*1024){toast("Max 20 MB",true);return;}
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    const b64=reader.result.split(",")[1];
+    if(api()){
+      const r=await api().upload_font(b64);
+      if(r&&r.ok){
+        injectFont(b64);
+        STATE=r.state||STATE;
+        if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
+        if($("fontPreview")) $("fontPreview").hidden=false;
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+});
+$("fontRemoveBtn").addEventListener("click", async ()=>{
+  if(api()){const r=await api().remove_font();STATE=r.state||STATE;}
+  const el=document.getElementById("customFontStyle");if(el)el.remove();
+  if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="none";
+  if($("fontPreview")) $("fontPreview").hidden=true;
+});
+
+/* ============================ ИНФО О СБОРКЕ ============================ */
+async function loadBuildInfo(){
+  if(!api()) return;
+  try{
+    const r=await api().get_build_info();
+    if(r) $("buildInfo").textContent=r.version+" · "+r.date;
+  }catch(e){}
+}
+
+/* ============================ ОБНОВЛЁННЫЙ init ============================ */
+async function initEnhanced(){
+  if(api()) STATE = await api().get_state();
+  const s = STATE.settings || {};
+  THEME = s.theme || "auto"; applyTheme();
+  applyLang(s.lang || "ru");
+  fillSettings(); renderServers(); updateConnectUI(); updateXrayStatus();
+  renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
+  CONFLICTS = STATE.conflicts || []; renderConflicts();
+
+  if(STATE.intro_done || (STATE.servers && STATE.servers.length)){
+    const intro=$("intro"); if(intro) intro.remove();
+    document.body.classList.remove("intro-active");
+    showApp();
+  }else{
+    document.body.classList.add("intro-active");
+  }
+
+  setInterval(tickEmoji, 60000);
+  setInterval(async ()=>{
+    if(!api() || document.hidden) return;
+    try{
+      const s = await api().get_state();
+      const changed = s.tun_active!==STATE.tun_active || s.connected!==STATE.connected
+                   || s.is_admin!==STATE.is_admin || s.tun_found!==STATE.tun_found;
+      STATE = s;
+      if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
+    }catch(e){}
+  }, 5000);
+
+  // v2.1.0 additions
+  await loadBg();
+  await loadFont();
+  loadColorPickers();
+  await loadBuildInfo();
+  if(s.background_image==="custom"){
+    document.body.classList.add("has-bg");
+    if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
+    enforceThemeForBg();
+  }
+  if(!STATE.tutorial_done && STATE.intro_done){
+    setTimeout(()=>startTutorial(),600);
+  }
+  checkNews();
+}
+// replace original init
+window.removeEventListener("pywebviewready",init);
+if(window.pywebview && window.pywebview.api){ initEnhanced(); }
+else window.addEventListener("pywebviewready", initEnhanced);
+
+/* ---------- обработка ошибок с подсказкой туториала ---------- */
+const _origToast=toast;
+window.toast=function(msg,isErr){
+  _origToast(msg,isErr);
+  if(isErr && !STATE.tutorial_done && STATE.intro_done && msg!==t("err_tutorial_hint")){
+    setTimeout(()=>_origToast(t("err_tutorial_hint"),true),3500);
+  }
+};
 </script>
 </body>
 </html>
