@@ -3,7 +3,9 @@
 
 import json
 import base64
+import ssl
 import urllib.request
+import urllib.error
 from dataclasses import dataclass, field
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -212,38 +214,74 @@ def parse_userinfo(header: str) -> dict:
     return info
 
 
+_SUB_USER_AGENTS = [
+    "HappX/1.0 (Xray client)",
+    "v2rayN/6.0",
+    "ClashForAndroid/2.5.12",
+]
+
+
+def _make_ssl_context(verify=True):
+    ctx = ssl.create_default_context()
+    if not verify:
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
+def _is_html_body(text: str) -> bool:
+    """Проверяет, является ли тело ответа HTML-страницей (а не подпиской)."""
+    low = text.strip()[:500].lower()
+    return ("<html" in low or "<body" in low or "<!doctype" in low
+            or "<head" in low or "<title" in low)
+
+
 def fetch_subscription(url: str, timeout: float = 15.0) -> tuple:
     """Возвращает (содержимое, инфо о подписке).
 
     Панели (Marzban, 3x-ui, Remnawave и прочие) кладут лимиты и срок действия
     в заголовки ответа — оттуда и берём остаток трафика и дату окончания.
     """
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "HappX/1.0 (Xray client)"},
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read().decode("utf-8", "ignore")
-        headers = resp.headers
-        info = parse_userinfo(headers.get("subscription-userinfo", ""))
+    last_err = None
+    for attempt, ua in enumerate(_SUB_USER_AGENTS):
+        for verify in (True, False):
+            req = urllib.request.Request(url, headers={"User-Agent": ua})
+            try:
+                ctx = _make_ssl_context(verify)
+                with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                    body = resp.read().decode("utf-8", "ignore")
+                if _is_html_body(body):
+                    raise ValueError("html_response")
+                headers = resp.headers
+                info = parse_userinfo(headers.get("subscription-userinfo", ""))
 
-        title = _maybe_base64(headers.get("profile-title", ""))
-        if title:
-            info["title"] = title
-        # объявление провайдера («нажмите обновить, если не работает» и т.п.)
-        announce = _maybe_base64(headers.get("announce", ""))
-        if announce:
-            info["announce"] = announce
-        support = (headers.get("support-url", "") or "").strip()
-        if support:
-            info["support_url"] = support
-        try:
-            refill = int(headers.get("subscription-refill-date", "") or 0)
-            if refill:
-                info["refill"] = refill        # когда провайдер обнулит трафик
-        except Exception:
-            pass
-        return body, info
+                title = _maybe_base64(headers.get("profile-title", ""))
+                if title:
+                    info["title"] = title
+                announce = _maybe_base64(headers.get("announce", ""))
+                if announce:
+                    info["announce"] = announce
+                support = (headers.get("support-url", "") or "").strip()
+                if support:
+                    info["support_url"] = support
+                try:
+                    refill = int(headers.get("subscription-refill-date", "") or 0)
+                    if refill:
+                        info["refill"] = refill
+                except Exception:
+                    pass
+                return body, info
+            except urllib.error.URLError as e:
+                last_err = e
+                if verify:
+                    continue
+            except ValueError:
+                raise
+            except Exception as e:
+                last_err = e
+                if verify:
+                    continue
+    raise last_err or ValueError("unknown_error")
 
 
 def _maybe_base64(value: str) -> str:

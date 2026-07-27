@@ -12,8 +12,9 @@ dist/
 releases/
 installer/Output/
 *.manifest
+*.spec
 
-# --- Бинарники ядра (кладутся в Release, не в репозиторий) ---
+# --- Бинарники ядра (кладутся рядом, не в репозиторий) ---
 xray.exe
 tun2socks.exe
 wintun.dll
@@ -23,6 +24,7 @@ geosite.dat
 # --- Пользовательские данные и конфиги ---
 data/
 *.log
+app.log
 
 # --- Прочее ---
 .claude/
@@ -30,4 +32,3 @@ data/
 .idea/
 Thumbs.db
 desktop.ini
-$null

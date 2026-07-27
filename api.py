@@ -27,6 +27,10 @@ EMOJI_PERIOD = 3600           # секунд между сменами
 
 
 class Api:
+    # Версия приложения (обновляется при сборке)
+    BUILD_VERSION = "2.1.0"
+    BUILD_DATE = "2026-07-28"
+
     def __init__(self):
         self._window = None
         self._on_speed_cb = None      # колбэк для трея (up_bps, down_bps)
@@ -159,6 +163,7 @@ class Api:
             "is_admin": tun.is_admin(),
             "tun_active": self._tun.is_running(),
             "intro_done": bool(self.settings.get("intro_done", False)),
+            "tutorial_done": bool(self.settings.get("tutorial_done", False)),
             "local_id": self.settings.get("local_id", ""),
             "rating": int(self.settings.get("rating", 0) or 0),
             "emoji": self.settings.get("emoji", ""),
@@ -191,15 +196,20 @@ class Api:
         return {"added": len(parsed), "state": self._state()}
 
     def import_subscription(self, url):
-        url = (url or "").strip()
+        url = storage.validate_url((url or "").strip())
         if not url:
             return {"error": "empty_url"}
         try:
             content, info = fetch_subscription(url)
             parsed = parse_subscription(content)
         except Exception as e:
-            storage.log("[sub] ошибка загрузки: %s" % e)
-            return {"error": str(e)}
+            err = str(e)
+            if "html_response" in err:
+                err = "html_response"
+            elif "ssl" in err.lower() or "certificate" in err.lower():
+                err = "ssl_error"
+            storage.log("[sub] ошибка загрузки: %s" % err)
+            return {"error": err}
         if not parsed:
             return {"error": "empty_sub"}
         self.servers = parsed
@@ -501,18 +511,27 @@ class Api:
         patch = patch or {}
         cur = self.settings
         for key, default in (("socks_port", 10808), ("http_port", 10809)):
-            try:
-                cur[key] = int(patch.get(key, cur.get(key, default)))
-            except Exception:
-                pass
+            cur[key] = storage.validate_port(patch.get(key, cur.get(key, default)))
+            if cur[key] == 0:
+                cur[key] = default
         cur["system_proxy"] = bool(patch.get("system_proxy", cur.get("system_proxy", True)))
         cur["xray_path"] = str(patch.get("xray_path", cur.get("xray_path", ""))).strip()
         cur["theme"] = patch.get("theme", cur.get("theme", "auto"))
         cur["lang"] = patch.get("lang", cur.get("lang", "ru"))
-        cur["tun_dns"] = str(patch.get("tun_dns", cur.get("tun_dns", "1.1.1.1"))).strip()
+        cur["tun_dns"] = storage.validate_dns(patch.get("tun_dns", cur.get("tun_dns", "1.1.1.1")))
         for key, default in (("minimize_to_tray", True), ("start_minimized", False),
                              ("high_priority", False)):
             cur[key] = bool(patch.get(key, cur.get(key, default)))
+        # ---- кастомизация ----
+        cur["custom_bg"] = storage.validate_color(patch.get("custom_bg", cur.get("custom_bg", "")))
+        cur["custom_text"] = storage.validate_color(patch.get("custom_text", cur.get("custom_text", "")))
+        cur["custom_accent"] = storage.validate_color(patch.get("custom_accent", cur.get("custom_accent", "")))
+        cur["custom_surface"] = storage.validate_color(patch.get("custom_surface", cur.get("custom_surface", "")))
+        cur["custom_font"] = str(patch.get("custom_font", cur.get("custom_font", ""))).strip()[:100]
+        # ---- новости ----
+        cur["news_off"] = bool(patch.get("news_off", cur.get("news_off", False)))
+        if "last_news_id" in patch:
+            cur["last_news_id"] = str(patch.get("last_news_id", cur.get("last_news_id", "")))
 
         ok = self._save()
         if ok and "high_priority" in patch:
@@ -574,10 +593,17 @@ class Api:
             time.sleep(15)
 
     def open_external(self, url):
-        """Открыть ссылку во ВНЕШНЕМ браузере (не внутри окна приложения)."""
+        """Открыть ссылку во ВНЕШНЕМ браузере (не внутри окна приложения).
+
+        Принимаем только http/https — иначе можно открыть file://, javascript: и прочие опасные схемы.
+        """
         import webbrowser
         url = (url or "").strip()
         if not url:
+            return {"ok": False}
+        low = url.lower()
+        if not low.startswith(("http://", "https://")):
+            storage.log("[security] open_external заблокировал небезопасную схему: %s" % url[:80])
             return {"ok": False}
         try:
             webbrowser.open(url, new=2)
@@ -617,6 +643,137 @@ class Api:
         self.settings["rating"] = n
         self._save()
         return self._state()
+
+    # ------------------------------------------------------------ фон
+    def upload_background(self, data_b64):
+        """Сохраняет пользовательское фоновое изображение."""
+        ok = storage.save_background(data_b64)
+        if ok:
+            self.settings["background_image"] = "custom"
+            self._save()
+        return {"ok": ok, "state": self._state()}
+
+    def get_background(self):
+        """Возвращает base64-данные фона для отображения в UI."""
+        return {"data": storage.load_background()}
+
+    def remove_background(self):
+        """Удаляет пользовательский фон."""
+        storage.remove_background()
+        self.settings["background_image"] = ""
+        self._save()
+        return {"ok": True, "state": self._state()}
+
+    # ------------------------------------------------------------ шрифт
+    def upload_font(self, data_b64):
+        """Сохраняет пользовательский .ttf шрифт."""
+        ok = storage.save_font(data_b64)
+        if ok:
+            self.settings["has_custom_font"] = True
+            self._save()
+        return {"ok": ok, "state": self._state()}
+
+    def get_font(self):
+        """Возвращает base64-данные шрифта для @font-face."""
+        return {"data": storage.load_font()}
+
+    def remove_font(self):
+        """Удаляет пользовательский шрифт."""
+        storage.remove_font()
+        self.settings["has_custom_font"] = False
+        self._save()
+        return {"ok": True, "state": self._state()}
+
+    # ------------------------------------------------------------ обучение
+    def finish_tutorial(self):
+        """Отметить, что обучение пройдено."""
+        self.settings["tutorial_done"] = True
+        self._save()
+        return self._state()
+
+    def reset_tutorial(self):
+        """Сбросить обучение для повторного просмотра."""
+        self.settings["tutorial_done"] = False
+        self._save()
+        return self._state()
+
+    # ------------------------------------------------------------ билд
+    def get_build_info(self):
+        """Информация о сборке для отображения в настройках."""
+        return {
+            "version": self.BUILD_VERSION,
+            "date": self.BUILD_DATE,
+            "python": __import__("sys").version.split()[0],
+            "platform": __import__("platform").platform(),
+        }
+
+    # ------------------------------------------------------------ новости
+    def get_news(self):
+        """Получить последний пост из публичного Telegram-канала.
+
+        Возвращает HTML с форматированием (жирный, курсив, ссылки и т.д.).
+        """
+        import re as _re
+        import urllib.request
+        import urllib.error
+        import html as _html
+        channel = "LEDOKOL_CHANNEL"
+        url = f"https://t.me/s/{channel}"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            })
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = resp.read().decode("utf-8", errors="replace")
+            # Ищем все посты (data-post="channel/123")
+            post_blocks = _re.findall(
+                r'<div[^>]*class="tgme_widget_message_wrap[^"]*"[^>]*data-post="([^"]+)"[^>]*>.*?'
+                r'<div[^>]*class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>\s*'
+                r'(?:<div[^>]*class="tgme_widget_message_footer)',
+                data, _re.DOTALL
+            )
+            if not post_blocks:
+                # Фоллбэк: ищем посты без footer
+                post_blocks = _re.findall(
+                    r'data-post="([^"]+)"[^>]*>.*?'
+                    r'<div[^>]*class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
+                    data, _re.DOTALL
+                )
+            if not post_blocks:
+                return {"ok": True, "html": "", "post_id": "", "date": "", "disabled": self.settings.get("news_off", False)}
+            post_id, post_html = post_blocks[-1]
+            # Очищаем нежелательные теги, но сохраняем форматирование TG
+            html = post_html
+            # Безопасность: удаляем опасные теги
+            html = _re.sub(r'<(script|iframe|object|embed|form|input|button|textarea|select|style)\b[^>]*>.*?</\1>', '', html, flags=_re.DOTALL | _re.IGNORECASE)
+            html = _re.sub(r'<(script|iframe|object|embed|form|input|button|textarea|select|style)\b[^>]*/>', '', html, flags=_re.IGNORECASE)
+            # Удаляем обработчики событий
+            html = _re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', html, flags=_re.IGNORECASE)
+            html = _re.sub(r'\s+on\w+\s*=\s*\S+', '', html, flags=_re.IGNORECASE)
+            # Удаляем <span class="tgme_widget_message_wrap..."> вложенные (реклама и т.д.)
+            html = _re.sub(r'<div[^>]*class="tgme_widget_message_author[^"]*".*?</div>', '', html, flags=_re.DOTALL)
+            # Удаляем спойлеры (оставляем текст)
+            html = _re.sub(r'<tg-spoiler[^>]*>(.*?)</tg-spoiler>', r'<span class="spoiler">\1</span>', html)
+            # Удаляем <tg-emoji> теги, оставляем текст
+            html = _re.sub(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', r'\1', html)
+            # Превращаем <br> в переносы строк
+            html = _re.sub(r'<br\s*/?>', '\n', html)
+            # Убирают <div class="tgme_widget_message_reply..."> (цитаты из других постов)
+            html = _re.sub(r'<div[^>]*class="tgme_widget_message_reply[^"]*".*?</div>\s*</div>', '', html, flags=_re.DOTALL)
+            html = html.strip()
+            # Дата
+            date_match = _re.search(r'datetime="([^"]+)"', data[data.rfind(post_id):])
+            date_str = date_match.group(1) if date_match else ""
+            if not date_str:
+                dates = _re.findall(r'datetime="([^"]+)"', data)
+                date_str = dates[-1] if dates else ""
+            return {
+                "ok": True, "html": html, "post_id": post_id,
+                "date": date_str, "disabled": self.settings.get("news_off", False)
+            }
+        except Exception as e:
+            storage.log(f"[news] ошибка получения: {e}")
+            return {"ok": False, "html": "", "post_id": "", "date": "", "disabled": self.settings.get("news_off", False)}
 
     def shutdown(self):
         try:

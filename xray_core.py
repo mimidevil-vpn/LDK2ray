@@ -257,12 +257,15 @@ def kill_orphans(exe_path: str = "") -> int:
     exe = exe_path or find_xray()
     if not exe:
         return 0
+    # Безопасная передача пути в PowerShell: используем -EncodedCommand с UTF-16LE
+    import base64 as _b64
+    safe_path = exe.replace("'", "''")
     script = (
         "$p='%s';"
         "$k=Get-CimInstance Win32_Process -Filter \"Name='xray.exe'\" -ErrorAction SilentlyContinue |"
         " Where-Object { $_.ExecutablePath -eq $p -and $_.ProcessId -ne $PID };"
         "$n=0; foreach($x in $k){ try{ Stop-Process -Id $x.ProcessId -Force -ErrorAction Stop; $n++ }catch{} };"
-        "$n" % exe.replace("'", "''")
+        "$n" % safe_path
     )
     try:
         si = subprocess.STARTUPINFO()

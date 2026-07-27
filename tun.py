@@ -267,6 +267,12 @@ class TunManager:
                 log(f"[tun] не удалось добавить маршрут для {ip}: {out.strip()}")
 
     def _configure_adapter(self, adapter, dns, on_log=None):
+        # Безопасная валидация DNS — только IP-адрес
+        import re
+        dns = (dns or "").strip()
+        if not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", dns):
+            dns = "1.1.1.1"
+
         # адрес + шлюз внутри туннеля: так Windows ставит маршрут по умолчанию сюда
         code, out = _run(["netsh", "interface", "ipv4", "set", "address",
                           f"name={adapter}", "source=static",
