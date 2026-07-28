@@ -613,7 +613,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
         <input type="text" class="field" id="subIntroInput" placeholder="https://sub.ledokol.shop/..." spellcheck="false" autocomplete="off">
       </div>
       <p class="sub-intro-hint">Вставьте ссылку на подписку. Получить её можно у бота: <a href="#" data-ext="https://t.me/LEDOKOL_SALES_BOT?start=refOIzad06m" class="sub-intro-link">@LEDOKOL_SALES_BOT</a></p>
-      <button class="intro-btn" id="introTgBtn">
+      <button class="intro-btn" id="introTgBtn" disabled>
         <span class="lbl" data-i18n="intro_btn"></span>
         <span class="spin"></span>
       </button>
@@ -1400,24 +1400,30 @@ function introGo(from, to){
 $("introTgBtn").addEventListener("click", async ()=>{
   const b=$("introTgBtn");
   const v=($("subIntroInput").value||"").trim();
-  if(v){
-    if(!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)){
-      toast("Допустима только ссылка sub.ledokol.shop", true); return;
-    }
-    b.classList.add("loading"); b.disabled=true;
-    try{
-      const r=await api().import_subscription(v);
-      if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); b.disabled=false; return; }
-      STATE=r.state; renderServers(); updateConnectUI();
-      toast(t("sub_imported")||"Подписка добавлена, подключаю VPN...");
-      const c=await api().connect(0);
-      if(c.error){ toast(t("err_connect_fail")||"Не удалось подключиться. Проверьте ссылку на подписку.", true); b.classList.remove("loading"); b.disabled=false; return; }
-      STATE=c.state; updateConnectUI(); updateXrayStatus();
-      toast(t("connected")||"VPN подключён!");
-      b.classList.remove("loading"); b.disabled=false;
-    }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); b.disabled=false; return; }
+  if(!v){
+    toast("Вставьте ссылку на подписку", true); return;
   }
-  introGo("introS1", "introS2");
+  if(!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)){
+    toast("Допустима только ссылка sub.ledokol.shop", true); return;
+  }
+  b.classList.add("loading"); b.disabled=true;
+  try{
+    const r=await api().import_subscription(v);
+    if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); b.disabled=false; return; }
+    STATE=r.state; renderServers(); updateConnectUI();
+    toast(t("sub_imported")||"Подписка добавлена, подключаю VPN...");
+    const c=await api().connect(0);
+    if(c.error){ toast(t("err_connect_fail")||"Не удалось подключиться. Проверьте ссылку на подписку.", true); b.classList.remove("loading"); b.disabled=false; return; }
+    STATE=c.state; updateConnectUI(); updateXrayStatus();
+    toast(t("connected")||"VPN подключён!");
+    introGo("introS1", "introTg");
+    showLinkedTg();
+    $("tgIntroInput").focus();
+  }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); b.disabled=false; }
+});
+$("subIntroInput").addEventListener("input", ()=>{
+  const v=($("subIntroInput").value||"").trim();
+  $("introTgBtn").disabled=!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v);
 });
 
 /* ---------- шаг знакомства: привязка Telegram ---------- */
