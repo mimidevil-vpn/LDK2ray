@@ -248,7 +248,9 @@ def fetch_subscription(url: str, timeout: float = 15.0) -> tuple:
             req = urllib.request.Request(url, headers={"User-Agent": ua})
             try:
                 ctx = _make_ssl_context(verify)
-                with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                handler = urllib.request.ProxyHandler({})
+                opener = urllib.request.build_opener(handler)
+                with opener.open(req, timeout=timeout, context=ctx) as resp:
                     body = resp.read().decode("utf-8", "ignore")
                 if _is_html_body(body):
                     raise ValueError("html_response")
