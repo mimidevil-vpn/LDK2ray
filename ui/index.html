@@ -456,6 +456,12 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 .intro-btn.loading .lbl,.intro-btn.loading svg{display:none;}
 @keyframes spin{to{transform:rotate(360deg)}}
 #introS1 .intro-btn{opacity:0; animation:introRise .9s var(--ease) .78s forwards;}
+.sub-intro-form{display:flex; gap:10px; width:100%; max-width:400px; margin-top:24px;
+  opacity:0; animation:introRise .9s var(--ease) .7s forwards;}
+.sub-intro-form .field{flex:1; text-align:center; font-size:14px; padding:16px 14px; border-radius:var(--pill);}
+.sub-intro-hint{margin-top:12px; font-size:13px; color:var(--muted); line-height:1.5; max-width:400px;
+  opacity:0; animation:introRise .9s var(--ease) .76s forwards;}
+.sub-intro-link{color:var(--text); font-weight:650; text-decoration:underline; text-underline-offset:2px;}
 .intro-note{margin-top:16px; font-size:12.5px; color:var(--muted);
   opacity:0; animation:introRise .9s var(--ease) .9s forwards;}
 
@@ -603,8 +609,11 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
       <div class="intro-tag" data-i18n="intro_tag"></div>
       <h1 class="intro-title">LEDOKOL HUB</h1>
       <p class="intro-sub" data-i18n="intro_sub"></p>
+      <div class="sub-intro-form">
+        <input type="text" class="field" id="subIntroInput" placeholder="https://sub.ledokol.shop/..." spellcheck="false" autocomplete="off">
+      </div>
+      <p class="sub-intro-hint">Вставьте ссылку на подписку. Получить её можно у бота: <a href="#" data-ext="https://t.me/LEDOKOL_SALES_BOT?start=refOIzad06m" class="sub-intro-link">@LEDOKOL_SALES_BOT</a></p>
       <button class="intro-btn" id="introTgBtn">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
         <span class="lbl" data-i18n="intro_btn"></span>
         <span class="spin"></span>
       </button>
@@ -1036,6 +1045,7 @@ const I18N = {
     select_first:"Сначала выберите сервер", saved:"Настройки сохранены",
     save_failed:"Не удалось сохранить — подробности в «Настройки → Папка с данными»",
     err_empty_url:"Укажите ссылку на подписку", err_empty_sub:"Подписка пуста или не распознана",
+    err_wrong_domain:"Допустима только подписка sub.ledokol.shop",
     err_no_links:"Не удалось разобрать ни одной ссылки", err_generic:"Ошибка: ",
     err_no_server:"Сервер не выбран", err_need_admin:"Для туннеля нужны права администратора",
     err_no_tun2socks:"Не найден tun2socks.exe — положите его рядом с приложением",
@@ -1138,6 +1148,7 @@ const I18N = {
     select_first:"Select a server first", saved:"Settings saved",
     save_failed:"Could not save — see Settings → Data folder",
     err_empty_url:"Enter a subscription link", err_empty_sub:"Subscription is empty or unrecognized",
+    err_wrong_domain:"Only sub.ledokol.shop subscriptions are allowed",
     err_no_links:"Could not parse any link", err_generic:"Error: ",
     err_no_server:"No server selected", err_need_admin:"Tunnel mode requires administrator rights",
     err_no_tun2socks:"tun2socks.exe not found — place it next to the app",
@@ -1383,14 +1394,21 @@ function introGo(from, to){
   $(to).classList.add("active");
 }
 $("introTgBtn").addEventListener("click", async ()=>{
-  const b=$("introTgBtn"); b.classList.add("loading");
-  try{ if(api()) await api().open_external("https://t.me/mimidevil"); }catch(e){}
-  setTimeout(()=>{
-    b.classList.remove("loading");
-    introGo("introS1", "introTg");
-    showLinkedTg();          // вдруг аккаунт уже привязан с прошлого раза
-    $("tgIntroInput").focus();
-  }, 550);
+  const b=$("introTgBtn");
+  const v=($("subIntroInput").value||"").trim();
+  if(v){
+    if(!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)){
+      toast("Допустима только ссылка sub.ledokol.shop", true); return;
+    }
+    b.classList.add("loading");
+    try{
+      const r=await api().import_subscription(v);
+      if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); return; }
+      STATE=r.state; renderServers(); updateConnectUI();
+      b.classList.remove("loading");
+    }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); return; }
+  }
+  introGo("introS1", "introS2");
 });
 
 /* ---------- шаг знакомства: привязка Telegram ---------- */

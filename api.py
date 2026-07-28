@@ -199,6 +199,10 @@ class Api:
         url = storage.validate_url((url or "").strip())
         if not url:
             return {"error": "empty_url"}
+        from urllib.parse import urlparse
+        host = urlparse(url).hostname or ""
+        if host != "sub.ledokol.shop":
+            return {"error": "wrong_domain"}
         try:
             content, info = fetch_subscription(url)
             parsed = parse_subscription(content)
