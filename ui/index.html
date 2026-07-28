@@ -485,22 +485,19 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 #introContinue{margin-top:34px; min-width:260px;}
 
 /* ==================== КАСТОМНЫЙ ФОН ==================== */
-body.has-bg{background:#0a0a0a;}
-body.has-bg::before{content:''; position:fixed; inset:-30px; z-index:-2;
+body.has-bg{
   background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-repeat:no-repeat; filter:blur(24px) brightness(.55); pointer-events:none;}
-body.has-bg::after{content:''; position:fixed; inset:0; z-index:-1;
-  background-image:var(--bg-img); background-size:contain; background-position:center;
-  background-repeat:no-repeat; pointer-events:none;}
+  background-attachment:fixed; background-color:#0a0a0a;}
+body.has-bg::before,body.has-bg::after{display:none;}
 body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
 body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
-body.has-bg .banner{background:rgba(5,5,5,.65); backdrop-filter:blur(18px) saturate(130%);
+body.has-bg .banner{background:rgba(5,5,5,.6); backdrop-filter:blur(18px) saturate(130%);
   -webkit-backdrop-filter:blur(18px) saturate(130%);}
 body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
 body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
 body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
 body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast,
-body.has-bg.theme-light .banner{background:rgba(244,244,242,.65);}
+body.has-bg.theme-light .banner{background:rgba(244,244,242,.6);}
 
 /* ==================== ТУТОРИАЛ (6 шагов) ==================== */
 .tutorial-overlay{position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.72);
@@ -615,43 +612,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.65);}
     </div>
   </div>
 
-  <!-- ШАГ 2: ПРИВЯЗКА ПРОФИЛЯ (TELEGRAM) -->
-  <div class="intro-screen" id="introProfile">
-    <div class="intro-inner">
-      <div class="ios-tile intro-icon intro-icon-float">
-        <span class="glow"></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3v18M4.23 7l15.54 10M4.23 17l15.54-10"/>
-          <path d="M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5"/>
-          <path d="M4.23 7l.88 2.88M4.23 7l2.88-.88M19.77 17l-.88-2.88M19.77 17l-2.88.88"/>
-          <path d="M19.77 7l-2.88.88M19.77 7l-.88 2.88M4.23 17l2.88-.88M4.23 17l.88-2.88"/>
-          <line x1="12" y1="3" x2="12" y2="7.5"/><line x1="12" y1="21" x2="12" y2="16.5"/>
-          <line x1="4.23" y1="7" x2="7.5" y2="9"/><line x1="19.77" y1="17" x2="16.5" y2="15"/>
-          <line x1="19.77" y1="7" x2="16.5" y2="9"/><line x1="4.23" y1="17" x2="7.5" y2="15"/>
-        </svg>
-      </div>
-      <h2 class="intro-title" data-i18n="profile_title" style="font-size:32px"></h2>
-      <p class="intro-sub" data-i18n="profile_sub"></p>
-      <div id="introProfileForm" class="tg-form" style="margin-top:24px; opacity:0; animation:introRise .9s var(--ease) .7s forwards;">
-        <input type="text" class="field" id="introTgInput" placeholder="@username" spellcheck="false">
-        <button class="intro-btn" id="introTgLinkBtn" style="min-width:180px; height:54px; margin-top:0">
-          <span class="lbl" data-i18n="tg_link"></span>
-          <span class="spin"></span>
-        </button>
-      </div>
-      <div id="introProfileLinked" class="tg-linked" style="margin-top:24px; opacity:0; animation:introRise .9s var(--ease) .7s forwards;" hidden>
-        <img id="introTgAvatar" alt="" style="width:52px; height:52px; border-radius:16px; object-fit:cover; border:0;">
-        <div class="tg-meta"><b id="introTgName"></b><i id="introTgUser"></i></div>
-      </div>
-      <p class="intro-note" data-i18n="profile_skip_note" style="cursor:pointer; color:var(--muted); text-decoration:underline;" onclick="skipProfileLink()"></p>
-      <button class="intro-btn" id="profileNextBtn" disabled>
-        <span class="lbl" data-i18n="welcome_next"></span>
-        <span class="spin"></span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ШАГ 3: ДОБРО ПОЖАЛОВАТЬ -->
+  <!-- ШАГ 2: ДОБРО ПОЖАЛОВАТЬ -->
   <div class="intro-screen" id="introS2">
     <div class="intro-inner">
       <div class="hub-badge" data-i18n="hub_badge"></div>
