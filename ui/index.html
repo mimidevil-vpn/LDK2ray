@@ -1103,7 +1103,8 @@ const I18N = {
     settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт",
     settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
     settings_tutorial_repeat:"Повторить",
-    settings_build:"Сборка"
+    settings_build:"Сборка",
+    theme_bg_locked:"Сначала удалите фон — с фоном тема фиксируется на тёмной"
   },
   en:{
     disconnected:"Disconnected", connected:"Connected", connecting:"Connecting…",
@@ -1202,7 +1203,8 @@ const I18N = {
     settings_font_upload:"Upload font", settings_font_remove:"Remove font",
     settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
     settings_tutorial_repeat:"Repeat",
-    settings_build:"Build"
+    settings_build:"Build",
+    theme_bg_locked:"Remove the background first — theme is locked to dark with a background"
   }
 };
 let LANG = "ru";
@@ -1861,11 +1863,17 @@ document.querySelectorAll(".lang-toggle button").forEach(b=>
 
 /* ---------- тост ---------- */
 let toastTimer=null;
-function toast(msg,isErr){
+window._baseToast=function(msg,isErr){
   const el=$("toast"); el.textContent=msg;
   el.className="toast show"+(isErr?" err":"");
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>{el.className="toast"+(isErr?" err":"");},3200);
+};
+function toast(msg,isErr){
+  window._baseToast(msg,isErr);
+  if(isErr && !STATE.tutorial_done && STATE.intro_done && msg!==t("err_tutorial_hint")){
+    setTimeout(()=>window._baseToast(t("err_tutorial_hint"),true),3500);
+  }
 }
 
 /* ---------- старт ---------- */
@@ -1876,43 +1884,58 @@ const TUTORIAL_STEPS=[
   {target:".server-list",title:"tutorial_step1",desc:"tutorial_step1_d"},
   {target:"#connectBtn",title:"tutorial_step2",desc:"tutorial_step2_d"},
   {target:".modes",title:"tutorial_step3",desc:"tutorial_step3_d"},
-  {target:"#panel-routes",title:"tutorial_step4",desc:"tutorial_step4_d"},
-  {target:"#panel-settings",title:"tutorial_step5",desc:"tutorial_step5_d"},
-  {target:"#panel-logs",title:"tutorial_step6",desc:"tutorial_step6_d"}
+  {target:"#panel-routes",tab:"routes",title:"tutorial_step4",desc:"tutorial_step4_d"},
+  {target:"#panel-settings",tab:"settings",title:"tutorial_step5",desc:"tutorial_step5_d"},
+  {target:"#panel-logs",tab:"logs",title:"tutorial_step6",desc:"tutorial_step6_d"}
 ];
-let _tutStep=0;
+let _tutStep=0, _tutPrevTab="servers";
 function startTutorial(){
-  _tutStep=0;
+  _tutStep=0; _tutPrevTab="servers";
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
   $("tutorialOverlay").classList.add("active");
   renderTutorialStep();
 }
 function renderTutorialStep(){
   const steps=TUTORIAL_STEPS, el=$("tutorialOverlay");
-  if(_tutStep>=steps.length){el.classList.remove("active");return;}
+  if(_tutStep>=steps.length){
+    el.classList.remove("active");
+    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
+    return;
+  }
   const s=steps[_tutStep];
   const prog=$("tutorialProgress");
   prog.innerHTML=steps.map((_,i)=>`<span class="${i<_tutStep?'done':''}"></span>`).join("");
   $("tutorialTitle").textContent=t(s.title);
   $("tutorialDesc").textContent=t(s.desc);
   $("tutorialNextBtn").textContent=_tutStep<steps.length-1?t("tutorial_next"):"✓";
-  // highlight target
-  const tgt=document.querySelector(s.target);
-  const hl=$("tutorialHighlight"), tt=$("tutorialTooltip");
-  if(tgt){
-    const r=tgt.getBoundingClientRect();
-    hl.style.display="block";
-    hl.style.left=Math.max(0,r.left-6)+"px"; hl.style.top=Math.max(0,r.top-6)+"px";
-    hl.style.width=Math.min(r.width+12,window.innerWidth)+"px";
-    hl.style.height=Math.min(r.height+12,window.innerHeight)+"px";
-    // tooltip below or above
-    let ttTop=r.bottom+16;
-    if(ttTop+200>window.innerHeight) ttTop=Math.max(10,r.top-220);
-    tt.style.top=ttTop+"px";
-    tt.style.left=Math.max(10,Math.min(r.left,window.innerWidth-400))+"px";
+  if(s.tab){
+    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===s.tab));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+s.tab));
   }
+  requestAnimationFrame(()=>{
+    const tgt=document.querySelector(s.target);
+    const hl=$("tutorialHighlight"), tt=$("tutorialTooltip");
+    if(tgt){
+      const r=tgt.getBoundingClientRect();
+      hl.style.display="block";
+      hl.style.left=Math.max(0,r.left-6)+"px"; hl.style.top=Math.max(0,r.top-6)+"px";
+      hl.style.width=Math.min(r.width+12,window.innerWidth)+"px";
+      hl.style.height=Math.min(r.height+12,window.innerHeight)+"px";
+      let ttTop=r.bottom+16;
+      if(ttTop+200>window.innerHeight) ttTop=Math.max(10,r.top-220);
+      tt.style.top=ttTop+"px";
+      tt.style.left=Math.max(10,Math.min(r.left,window.innerWidth-400))+"px";
+    }
+  });
 }
 $("tutorialNextBtn").addEventListener("click",()=>{ _tutStep++; renderTutorialStep(); });
-$("tutorialSkipBtn").addEventListener("click",()=>{ $("tutorialOverlay").classList.remove("active"); });
+$("tutorialSkipBtn").addEventListener("click",()=>{
+  $("tutorialOverlay").classList.remove("active");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
+});
 $("repeatTutorialBtn").addEventListener("click", async ()=>{
   if(api()) await api().reset_tutorial();
   startTutorial();
@@ -2052,7 +2075,7 @@ async function loadFont(){
 function injectFont(b64){
   let el=document.getElementById("customFontStyle");
   if(!el){el=document.createElement("style");el.id="customFontStyle";document.head.appendChild(el);}
-  el.textContent=`@font-face{font-family:'CustomUserFont';src:url(data:font/ttf;base64,${b64}) format('truetype');font-display:swap;} body{font-family:'CustomUserFont',inherit!important;}`;
+  el.textContent=`@font-face{font-family:'CustomUserFont';src:url(data:font/ttf;base64,${b64}) format('truetype');font-display:swap;} body, body *{font-family:'CustomUserFont',"SF Pro Display","SF Pro Text","Segoe UI",system-ui,sans-serif!important;}`;
 }
 $("fontUploadInput").addEventListener("change", async (e)=>{
   const file=e.target.files[0]; if(!file) return;
@@ -2133,19 +2156,8 @@ async function initEnhanced(){
   }
   checkNews();
 }
-// replace original init
-window.removeEventListener("pywebviewready",init);
 if(window.pywebview && window.pywebview.api){ initEnhanced(); }
 else window.addEventListener("pywebviewready", initEnhanced);
-
-/* ---------- обработка ошибок с подсказкой туториала ---------- */
-const _origToast=toast;
-window.toast=function(msg,isErr){
-  _origToast(msg,isErr);
-  if(isErr && !STATE.tutorial_done && STATE.intro_done && msg!==t("err_tutorial_hint")){
-    setTimeout(()=>_origToast(t("err_tutorial_hint"),true),3500);
-  }
-};
 </script>
 </body>
 </html>
