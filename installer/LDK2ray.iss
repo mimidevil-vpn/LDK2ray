@@ -41,8 +41,14 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
 
 [Files]
-; onedir-сборка: забираем всю папку dist\LDK2ray (exe + _internal + ядро + geo)
+; onedir-сборка: забираем всю папку dist\LDK2ray (exe + _internal)
 Source: "..\dist\LDK2ray\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; runtime-зависимости: xray core, tun2socks, wintun, geo-базы
+Source: "..\releases\LDK2ray\xray.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\releases\LDK2ray\tun2socks.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\releases\LDK2ray\wintun.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\releases\LDK2ray\geoip.dat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\releases\LDK2ray\geosite.dat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
