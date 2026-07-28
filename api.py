@@ -28,7 +28,7 @@ EMOJI_PERIOD = 3600           # секунд между сменами
 
 class Api:
     # Версия приложения (обновляется при сборке)
-    BUILD_VERSION = "2.1.2"
+    BUILD_VERSION = "2.1.3"
     BUILD_DATE = "2026-07-28"
 
     def __init__(self):

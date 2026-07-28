@@ -485,20 +485,19 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 #introContinue{margin-top:34px; min-width:260px;}
 
 /* ==================== КАСТОМНЫЙ ФОН ==================== */
-body.has-bg{background:none;}
-body.has-bg::before{content:''; position:fixed; inset:0; z-index:0;
-  background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-attachment:fixed; pointer-events:none; opacity:.4;}
-body.has-bg::after{display:none;}
+body.has-bg{
+  background-image:var(--bg-img); background-size:contain; background-repeat:no-repeat;
+  background-position:center; background-attachment:fixed; background-color:#0a0a0a;}
+body.has-bg::before,body.has-bg::after{display:none;}
 body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
 body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
-body.has-bg .banner{position:relative; z-index:1; background:rgba(5,5,5,.55); backdrop-filter:blur(18px) saturate(130%);
+body.has-bg .banner{background:rgba(5,5,5,.6); backdrop-filter:blur(18px) saturate(130%);
   -webkit-backdrop-filter:blur(18px) saturate(130%);}
 body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
 body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
 body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
 body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast,
-body.has-bg.theme-light .banner{position:relative; z-index:1; background:rgba(244,244,242,.55);}
+body.has-bg.theme-light .banner{background:rgba(244,244,242,.6);}
 
 /* ==================== ТУТОРИАЛ (6 шагов) ==================== */
 .tutorial-overlay{position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.72);
@@ -2390,6 +2389,14 @@ async function initEnhanced(){
   CONFLICTS = STATE.conflicts || []; renderConflicts();
 
   const hasSub = STATE.settings && STATE.settings.subscription_url;
+
+  // если подписка есть, но серверы пусты — автообновляем
+  if (hasSub && STATE.servers.length === 0) {
+    try {
+      const r = await api().refresh_subscription();
+      if (r.state) STATE = r.state;
+    } catch(e) { /* если сеть недоступна — ничего страшного */ }
+  }
 
   // если подписка уже есть — пропускаем всё знакомство
   if (hasSub && STATE.intro_done) {
