@@ -485,24 +485,20 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 #introContinue{margin-top:34px; min-width:260px;}
 
 /* ==================== КАСТОМНЫЙ ФОН ==================== */
-body.has-bg{
+body.has-bg{background:none;}
+body.has-bg::before{content:''; position:fixed; inset:0; z-index:0;
   background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-attachment:scroll;
-}
-body.has-bg::before{opacity:.4;}
+  background-attachment:fixed; pointer-events:none; opacity:.4;}
+body.has-bg::after{display:none;}
 body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
 body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
-body.has-bg .banner{background:rgba(5,5,5,.55); backdrop-filter:blur(18px) saturate(130%);
+body.has-bg .banner{position:relative; z-index:1; background:rgba(5,5,5,.55); backdrop-filter:blur(18px) saturate(130%);
   -webkit-backdrop-filter:blur(18px) saturate(130%);}
-/* убираем полосы: фон не привязан к вьюпорту, элементы с blur не рвутся */
-body.has-bg::after{content:''; position:fixed; inset:0; z-index:-1;
-  background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-attachment:scroll; pointer-events:none;}
 body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
 body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
 body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
 body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast,
-body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
+body.has-bg.theme-light .banner{position:relative; z-index:1; background:rgba(244,244,242,.55);}
 
 /* ==================== ТУТОРИАЛ (6 шагов) ==================== */
 .tutorial-overlay{position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.72);
@@ -825,17 +821,17 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <div class="news-empty" data-i18n="news_loading"></div>
         </div>
       </div>
-      <div class="card">
-        <div class="news-header">
-          <div class="news-header-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
-            <span data-i18n="news_channel_support"></span>
-          </div>
-        </div>
-        <div class="news-feed" id="supportFeed">
-          <div class="news-empty" data-i18n="news_loading"></div>
-        </div>
+  <div class="card" id="otherNewsCard" style="display:none">
+    <div class="news-header">
+      <div class="news-header-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
+        <span data-i18n="news_channel_other"></span>
       </div>
+    </div>
+    <div class="news-feed" id="supportFeed">
+      <div class="news-empty" data-i18n="news_loading"></div>
+    </div>
+  </div>
     </section>
 
     <!-- ======================= ПРОФИЛЬ ======================= -->
@@ -1148,7 +1144,7 @@ hub_badge:"Приложение для пользователей Ledokol VPN",
     hub_p3:"Чтобы начать — добавьте свой ключ или подписку во вкладке «Добавить». Приятного пользования!",
     hub_continue:"Продолжить",
     ql_news:"Новости", ql_news_sub:"Канал Ledokol",
-    tab_news:"Новости", news_channel:"Новости", news_channel_support:"Благодарности",
+    tab_news:"Новости", news_channel:"Новости", news_channel_other:"Прочее", news_channel_support:"Прочее",
     news_loading:"Загрузка…", news_no_posts:"Нет постов", news_notifications:"Уведомления",
     tutorial_skip:"Пропустить", tutorial_next:"Далее",
     tutorial_step1:"Серверы", tutorial_step1_d:"Здесь отображается список ваших серверов. Нажмите на сервер, чтобы выбрать его.",
@@ -1262,7 +1258,7 @@ hub_badge:"App for Ledokol VPN users",
     hub_p3:"To get started, add your key or subscription in the “Add” tab. Enjoy!",
     hub_continue:"Continue",
     ql_news:"News", ql_news_sub:"Ledokol channel",
-    tab_news:"News", news_channel:"News", news_channel_support:"Thank-yous",
+    tab_news:"News", news_channel:"News", news_channel_other:"Other", news_channel_support:"Other",
     news_loading:"Loading…", news_no_posts:"No posts yet", news_notifications:"Notifications",
     tutorial_skip:"Skip", tutorial_next:"Next",
     tutorial_step1:"Servers", tutorial_step1_d:"Your server list is shown here. Tap a server to select it.",
@@ -2165,16 +2161,14 @@ async function checkNews(){
   }catch(e){}
   try{
     const sr=await api().get_support_news();
+    const card=$("otherNewsCard");
     if(sr && sr.ok && sr.html && !/channel\s*created/i.test(sr.html)){
       renderNews("supportFeed", sr.html, sr.date);
-      const card=$("supportFeed")?.closest(".card");
       if(card) card.style.display="";
     }else{
-      // если постов нет или канал пуст — прячем блок
-      const card=$("supportFeed")?.closest(".card");
       if(card) card.style.display="none";
     }
-  }catch(e){}
+  }catch(e){}; // NOSONAR
 }
 function renderNews(feedId, html, date){
   let dateStr="";

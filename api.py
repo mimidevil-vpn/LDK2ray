@@ -735,7 +735,10 @@ class Api:
             req = urllib.request.Request(url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             })
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            # обходим системный прокси — при включённом VPN t.me недоступен через локальный прокси
+            _noproxy = urllib.request.ProxyHandler({})
+            _opener = urllib.request.build_opener(_noproxy)
+            with _opener.open(req, timeout=10) as resp:
                 data = resp.read().decode("utf-8", errors="replace")
             # Ищем все посты (data-post="channel/123")
             post_blocks = _re.findall(

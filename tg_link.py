@@ -34,7 +34,10 @@ def _get(url: str, timeout=12.0) -> bytes:
         "User-Agent": UA,
         "Accept-Language": "ru,en;q=0.8",
     })
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    # обходим системный прокси (нужно для работы при включённом VPN)
+    handler = urllib.request.ProxyHandler({})
+    opener = urllib.request.build_opener(handler)
+    with opener.open(req, timeout=timeout) as resp:
         return resp.read()
 
 
