@@ -1496,61 +1496,9 @@ function hideSubError() {
 }
 
 $("subNextBtn").addEventListener("click", () => {
-  if (!_subReady) return;
-  introGo("introSub", "introProfile");
-  initIntroProfile();
-});
-
-/* ======================= ПРИВЯЗКА ПРОФИЛЯ В ИНТРО ======================= */
-let _profileSkipped = false;
-
-function initIntroProfile() {
-  const s = STATE.settings || {};
-  const linked = !!(s.tg_username);
-  $("introProfileForm").hidden = linked;
-  $("introProfileLinked").hidden = !linked;
-  if (linked) {
-    $("introTgName").textContent = s.tg_name || s.tg_username;
-    $("introTgUser").textContent = "@" + s.tg_username;
-    const av = $("introTgAvatar");
-    if (s.tg_avatar) { av.src = s.tg_avatar; av.hidden = false; } else { av.hidden = true; }
-  }
-  checkProfileNext();
-}
-
-function checkProfileNext() {
-  const linked = !!((STATE.settings||{}).tg_username);
-  $("profileNextBtn").disabled = !linked && !_profileSkipped;
-}
-
-function skipProfileLink() {
-  _profileSkipped = true;
-  $("profileNextBtn").disabled = false;
-}
-
-$("introTgInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") $("introTgLinkBtn").click();
-});
-
-$("introTgLinkBtn").addEventListener("click", async () => {
-  const v = $("introTgInput").value.trim();
-  if (!v) { toast(t("tg_err_bad_username"), true); return; }
-  const btn = $("introTgLinkBtn");
-  btn.classList.add("loading");
-  try {
-    const r = await api().link_telegram(v);
-    if (r.error) { toast(t("tg_err_"+r.error) || t("err_generic")+r.error, true); return; }
-    STATE = r.state;
-    $("introTgInput").value = "";
-    initIntroProfile();
-    toast(t("tg_ok"));
-  } catch(e) { toast(t("err_generic")+e, true); }
-  finally { btn.classList.remove("loading"); }
-});
-
-$("profileNextBtn").addEventListener("click", () => {
-  if ($("profileNextBtn").disabled) return;
-  introGo("introProfile", "introS2");
+  if (!_subReady || !api()) return;
+  // подписка готова — переходим к финишному экрану
+  introGo("introSub", "introS2");
 });
 
 $("introContinue").addEventListener("click", async () => {
