@@ -140,9 +140,9 @@ def fetch_profile(raw_username: str) -> dict:
                       html, re.I)
     if m:
         photo = _unescape(m.group(1))
-    else:
+    if not photo:
         og = _meta(html, "og:image")
-        if og and "/file/" in og:
+        if og:
             photo = _unescape(og)
 
     return {

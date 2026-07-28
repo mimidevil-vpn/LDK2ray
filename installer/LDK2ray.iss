@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define MyAppName      "LDK2ray"
-#define MyAppVersion   "2.1.0"
+#define MyAppVersion   "2.1.1"
 #define MyAppPublisher "mimidevil"
 #define MyAppURL       "https://t.me/mimidevil"
 #define MyAppExeName   "LDK2ray.exe"

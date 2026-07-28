@@ -772,11 +772,11 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
 
   <nav class="tabs glass rise d4">
     <button class="tab active" data-tab="servers" data-i18n="tab_servers"></button>
+    <button class="tab" data-tab="news" data-i18n="tab_news"></button>
     <button class="tab" data-tab="profile" data-i18n="tab_profile"></button>
     <button class="tab" data-tab="add" data-i18n="tab_add"></button>
     <button class="tab" data-tab="routes" data-i18n="tab_routes"></button>
     <button class="tab" data-tab="settings" data-i18n="tab_settings"></button>
-    <button class="tab" data-tab="news" data-i18n="tab_news"></button>
     <button class="tab" data-tab="logs" data-i18n="tab_logs"></button>
     <span class="spacer"></span>
     <button class="ping-btn" id="pingBtn" data-i18n="ping_all"></button>
@@ -785,6 +785,25 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
   <main class="content rise d5">
     <section class="panel active" id="panel-servers">
       <div class="server-list" id="serverList"></div>
+    </section>
+
+    <!-- ======================= НОВОСТИ ======================= -->
+    <section class="panel" id="panel-news">
+      <div class="card">
+        <div class="news-header">
+          <div class="news-header-left">
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            <span data-i18n="news_channel"></span>
+          </div>
+          <div class="news-header-right">
+            <label for="newsOffToggle" data-i18n="news_notifications"></label>
+            <label class="switch"><input type="checkbox" id="newsOffToggle"><span class="track"></span></label>
+          </div>
+        </div>
+        <div class="news-feed" id="newsFeed">
+          <div class="news-empty" data-i18n="news_loading"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ======================= ПРОФИЛЬ ======================= -->
@@ -953,6 +972,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <input type="file" id="fontUploadInput" accept=".ttf" style="display:none">
           <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
         </div>
+        <button class="btn ghost" id="fontApplyBtn" data-i18n="settings_font_apply" style="display:none"></button>
         <div class="font-preview" id="fontPreview" hidden>Пример шрифта AaBbCc 123</div>
       </div>
       <div class="card">
@@ -968,26 +988,15 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
         </div>
       </div>
-    </section>
-
-    <!-- ======================= НОВОСТИ ======================= -->
-    <section class="panel" id="panel-news">
       <div class="card">
-        <div class="news-header">
-          <div class="news-header-left">
-            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-            <span data-i18n="news_channel"></span>
-          </div>
-          <div class="news-header-right">
-            <label for="newsOffToggle" data-i18n="news_notifications"></label>
-            <label class="switch"><input type="checkbox" id="newsOffToggle"><span class="track"></span></label>
-          </div>
-        </div>
-        <div class="news-feed" id="newsFeed">
-          <div class="news-empty" data-i18n="news_loading"></div>
-        </div>
+        <h3 data-i18n="sysinfo_title"></h3>
+        <div class="pv-row"><span data-i18n="sysinfo_version"></span><b id="sysinfoVersion">-</b></div>
+        <div class="pv-row"><span data-i18n="sysinfo_date"></span><b id="sysinfoDate">-</b></div>
+        <div class="pv-row"><span data-i18n="sysinfo_python"></span><b id="sysinfoPython">-</b></div>
+        <div class="pv-row"><span data-i18n="sysinfo_platform"></span><b id="sysinfoPlatform">-</b></div>
       </div>
     </section>
+
 
     <section class="panel" id="panel-logs">
       <div class="log-wrap">
@@ -1100,10 +1109,12 @@ const I18N = {
     settings_colors:"Цвета", settings_apply_colors:"Применить",
     color_bg:"Фон", color_text:"Текст", color_accent:"Акцент", color_surface:"Поверхность",
     settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
-    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт",
+    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт", settings_font_apply:"Применить шрифт",
     settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
     settings_tutorial_repeat:"Повторить",
     settings_build:"Сборка",
+    sysinfo_title:"О приложении", sysinfo_version:"Версия", sysinfo_date:"Дата сборки",
+    sysinfo_python:"Python", sysinfo_platform:"Платформа",
     theme_bg_locked:"Сначала удалите фон — с фоном тема фиксируется на тёмной"
   },
   en:{
@@ -1200,10 +1211,12 @@ const I18N = {
     settings_colors:"Colors", settings_apply_colors:"Apply",
     color_bg:"Background", color_text:"Text", color_accent:"Accent", color_surface:"Surface",
     settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
-    settings_font_upload:"Upload font", settings_font_remove:"Remove font",
+    settings_font_upload:"Upload font", settings_font_remove:"Remove font", settings_font_apply:"Apply font",
     settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
     settings_tutorial_repeat:"Repeat",
     settings_build:"Build",
+    sysinfo_title:"About", sysinfo_version:"Version", sysinfo_date:"Build date",
+    sysinfo_python:"Python", sysinfo_platform:"Platform",
     theme_bg_locked:"Remove the background first — theme is locked to dark with a background"
   }
 };
@@ -2043,12 +2056,18 @@ function loadColorPickers(){
 }
 function applyCustomColors(){
   const root=document.documentElement;
+  const c=STATE.settings||{};
+  const hasCustom=!!(c.custom_bg||c.custom_text||c.custom_accent||c.custom_surface);
+  if(!hasCustom){
+    resetCustomColors();
+    return;
+  }
   const bg=$("colorBg").value, txt=$("colorText").value, acc=$("colorAccent").value, surf=$("colorSurface").value;
   if(bg) root.style.setProperty("--bg",bg);
-  if(txt){root.style.setProperty("--text",txt);root.style.setProperty("--btn-fg",bg);}
+  if(txt){root.style.setProperty("--text",txt);root.style.setProperty("--btn-fg",bg||"var(--btn-fg)");}
   if(acc) root.style.setProperty("--btn-bg",acc);
   if(surf) root.style.setProperty("--surface-2",surf);
-  CUSTOM_COLORS_ACTIVE=!!(bg||txt||acc||surf);
+  CUSTOM_COLORS_ACTIVE=true;
 }
 function resetCustomColors(){
   const root=document.documentElement;
@@ -2076,6 +2095,7 @@ async function loadFont(){
     if(r&&r.data){
       injectFont(r.data);
       if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
+      if($("fontApplyBtn")) $("fontApplyBtn").style.display="";
       if($("fontPreview")) $("fontPreview").hidden=false;
     }
   }catch(e){}
@@ -2097,6 +2117,7 @@ $("fontUploadInput").addEventListener("change", async (e)=>{
         injectFont(b64);
         STATE=r.state||STATE;
         if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
+        if($("fontApplyBtn")) $("fontApplyBtn").style.display="";
         if($("fontPreview")) $("fontPreview").hidden=false;
       }
     }
@@ -2107,7 +2128,16 @@ $("fontRemoveBtn").addEventListener("click", async ()=>{
   if(api()){const r=await api().remove_font();STATE=r.state||STATE;}
   const el=document.getElementById("customFontStyle");if(el)el.remove();
   if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="none";
+  if($("fontApplyBtn")) $("fontApplyBtn").style.display="none";
   if($("fontPreview")) $("fontPreview").hidden=true;
+});
+$("fontApplyBtn").addEventListener("click", async ()=>{
+  if(!api()) return;
+  try{
+    const r=await api().get_font();
+    if(r&&r.data) injectFont(r.data);
+  }catch(e){}
+  toast(t("saved"));
 });
 
 /* ============================ ИНФО О СБОРКЕ ============================ */
@@ -2115,7 +2145,12 @@ async function loadBuildInfo(){
   if(!api()) return;
   try{
     const r=await api().get_build_info();
-    if(r) $("buildInfo").textContent=r.version+" · "+r.date;
+    if(!r) return;
+    $("buildInfo").textContent=r.version+" · "+r.date;
+    $("sysinfoVersion").textContent=r.version;
+    $("sysinfoDate").textContent=r.date;
+    $("sysinfoPython").textContent=r.python;
+    $("sysinfoPlatform").textContent=r.platform;
   }catch(e){}
 }
 
