@@ -2157,7 +2157,7 @@ async function loadBuildInfo(){
   }catch(e){}
 }
 
-/* ============================ ОБНОВЛЁННЫЙ init ============================ */
+/* ============================ INIT ============================ */
 async function initEnhanced(){
   if(api()) STATE = await api().get_state();
   const s = STATE.settings || {};
@@ -2187,20 +2187,22 @@ async function initEnhanced(){
     }catch(e){}
   }, 5000);
 
-  // v2.1.0 additions
-  await loadBg();
-  await loadFont();
-  loadColorPickers();
-  await loadBuildInfo();
-  if(s.background_image==="custom"){
-    document.body.classList.add("has-bg");
-    if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
-    enforceThemeForBg();
-  }
+  // v2.1.0 additions — обёрнуты в try/catch, чтобы не ломали интро
+  try{ await loadBg(); }catch(e){}
+  try{ await loadFont(); }catch(e){}
+  try{ loadColorPickers(); }catch(e){}
+  try{ await loadBuildInfo(); }catch(e){}
+  try{
+    if(s.background_image==="custom"){
+      document.body.classList.add("has-bg");
+      if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
+      enforceThemeForBg();
+    }
+  }catch(e){}
   if(!STATE.tutorial_done && STATE.intro_done){
     setTimeout(()=>startTutorial(),600);
   }
-  checkNews();
+  try{ checkNews(); }catch(e){}
 }
 if(window.pywebview && window.pywebview.api){ initEnhanced(); }
 else window.addEventListener("pywebviewready", initEnhanced);
