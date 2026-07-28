@@ -446,8 +446,9 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
   background:var(--btn-bg); display:inline-flex; align-items:center; justify-content:center; gap:11px;
   font-family:inherit;
   box-shadow:0 16px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35); transition:.3s var(--ease);}
-.intro-btn:hover{transform:translateY(-2px); box-shadow:0 22px 52px rgba(0,0,0,.34);}
-.intro-btn:active{transform:translateY(0);}
+.intro-btn:disabled{opacity:.35!important; cursor:default; pointer-events:none; box-shadow:none;}
+.intro-btn:hover:not(:disabled){transform:translateY(-2px); box-shadow:0 22px 52px rgba(0,0,0,.34);}
+.intro-btn:active:not(:disabled){transform:translateY(0);}
 .intro-btn svg{width:20px; height:20px; fill:currentColor;}
 .intro-btn.loading{pointer-events:none;}
 .intro-btn .spin{width:18px; height:18px; border:2px solid currentColor; border-right-color:transparent;
@@ -2202,10 +2203,16 @@ async function initEnhanced(){
   renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
   CONFLICTS = STATE.conflicts || []; renderConflicts();
 
-  if(STATE.intro_done || (STATE.servers && STATE.servers.length)){
+  const hasTg = STATE.settings && STATE.settings.tg_username;
+  if((STATE.intro_done || (STATE.servers && STATE.servers.length)) && hasTg){
     const intro=$("intro"); if(intro) intro.remove();
     document.body.classList.remove("intro-active");
     showApp();
+  }else if(STATE.intro_done && !hasTg){
+    document.body.classList.add("intro-active");
+    introGo("introS1","introTg");
+    showLinkedTg();
+    $("tgIntroInput").focus();
   }else{
     document.body.classList.add("intro-active");
   }
