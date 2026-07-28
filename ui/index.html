@@ -1427,6 +1427,9 @@ $("tgIntroNext").addEventListener("click", ()=>introGo("introTg", "introS2"));
 $("introContinue").addEventListener("click", async ()=>{
   try{ if(api()) STATE = await api().finish_intro(); }catch(e){}
   revealApp();
+  if(!STATE.tutorial_done){
+    setTimeout(()=>startTutorial(),600);
+  }
 });
 
 /* ---------- внешние ссылки ---------- */

@@ -78,13 +78,28 @@ def clean_name(raw: str) -> str:
 
 
 def _avatar_data_uri(url: str) -> str:
-    """Скачивает аватарку и превращает в компактный data:URI (JPEG 160px)."""
+    """Скачивает аватарку и превращает в компактный data:URI (JPEG 160px).
+
+    Если основной CDN заблокирован (vpn/fake-ip), пробуем cdn1–cdn3 как fallback.
+    """
     if not url:
         return ""
-    try:
-        raw = _get(url, timeout=15.0)
-    except Exception as e:
-        log(f"[tg] не удалось скачать аватар: {e}")
+    raw = b""
+    # Собираем список URL для попыток: оригинальный + альтернативные CDN
+    urls = [url]
+    for alt in ("cdn1", "cdn2", "cdn3"):
+        candidate = re.sub(r"cdn\d\.telesco\.pe", alt + ".telesco.pe", url)
+        if candidate not in urls:
+            urls.append(candidate)
+    for u in urls:
+        try:
+            raw = _get(u, timeout=8.0)
+            if raw:
+                break
+        except Exception:
+            continue
+    if not raw:
+        log(f"[tg] не удалось скачать аватар ни с одного CDN: {url}")
         return ""
     try:
         from PIL import Image
@@ -96,7 +111,6 @@ def _avatar_data_uri(url: str) -> str:
         raw = buf.getvalue()
         mime = "image/jpeg"
     except Exception:
-        # Pillow нет или картинка экзотическая — кладём как есть, если не огромная
         if len(raw) > 700_000:
             return ""
         mime = "image/jpeg"
