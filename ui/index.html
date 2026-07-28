@@ -2031,13 +2031,15 @@ function enforceThemeForBg(){
 }
 
 /* ============================ КАСТОМНЫЕ ЦВЕТА ============================ */
+let CUSTOM_COLORS_ACTIVE=false;
 function loadColorPickers(){
   const s=STATE.settings||{};
   if(s.custom_bg) $("colorBg").value=s.custom_bg;
   if(s.custom_text) $("colorText").value=s.custom_text;
   if(s.custom_accent) $("colorAccent").value=s.custom_accent;
   if(s.custom_surface) $("colorSurface").value=s.custom_surface;
-  applyCustomColors();
+  CUSTOM_COLORS_ACTIVE=!!(s.custom_bg||s.custom_text||s.custom_accent||s.custom_surface);
+  if(CUSTOM_COLORS_ACTIVE) applyCustomColors();
 }
 function applyCustomColors(){
   const root=document.documentElement;
@@ -2046,6 +2048,12 @@ function applyCustomColors(){
   if(txt){root.style.setProperty("--text",txt);root.style.setProperty("--btn-fg",bg);}
   if(acc) root.style.setProperty("--btn-bg",acc);
   if(surf) root.style.setProperty("--surface-2",surf);
+  CUSTOM_COLORS_ACTIVE=!!(bg||txt||acc||surf);
+}
+function resetCustomColors(){
+  const root=document.documentElement;
+  ["--bg","--text","--btn-fg","--btn-bg","--surface-2"].forEach(p=>root.style.removeProperty(p));
+  CUSTOM_COLORS_ACTIVE=false;
 }
 $("applyColorsBtn").addEventListener("click", async ()=>{
   applyCustomColors();
