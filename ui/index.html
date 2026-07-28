@@ -465,28 +465,12 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 .sub-intro-link{color:var(--text); font-weight:650; text-decoration:underline; text-underline-offset:2px;}
 .intro-note{margin-top:16px; font-size:12.5px; color:var(--muted);
   opacity:0; animation:introRise .9s var(--ease) .9s forwards;}
+.intro-error{margin-top:14px; padding:12px 16px; font-size:13px; color:var(--text); font-weight:650;
+  background:var(--surface-2); border:1px solid var(--border-strong); border-radius:var(--pill);
+  text-align:center; max-width:400px; opacity:0; animation:introRise .6s var(--ease) forwards;}
+.intro-error[hidden]{display:none;}
 
-/* шаг привязки Telegram в знакомстве */
-.tg-intro-form{display:flex; gap:10px; align-items:center; margin-top:30px; width:100%; max-width:400px;
-  opacity:0; animation:introRise .9s var(--ease) .7s forwards;}
-.tg-intro-form .field{flex:1; text-align:center; font-size:15px; padding:16px 14px; border-radius:var(--pill);}
-.tg-intro-form .intro-btn{margin-top:0; min-width:150px; height:54px; flex:none;}
-.tg-intro-form[hidden]{display:none;}
-.tg-intro-card{display:flex; align-items:center; gap:14px; margin-top:28px; padding:14px 20px 14px 14px;
-  border-radius:var(--pill); background:var(--surface-2); border:1px solid var(--border);
-  box-shadow:inset 0 1px 0 var(--specular); animation:iconPop .7s var(--ease) both; text-align:left;}
-.tg-intro-card[hidden]{display:none;}
-.tg-intro-card img{width:54px; height:54px; border-radius:50%; flex:none; object-fit:cover;
-  border:1px solid var(--border);}
-.tg-intro-card b{display:block; font-size:16px; font-weight:750; max-width:230px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.tg-intro-card i{font-style:normal; font-size:13.5px; color:var(--muted);}
-.intro-skip{margin-top:18px; border:0; background:transparent; color:var(--muted); cursor:pointer;
-  font-family:inherit; font-size:13.5px; font-weight:650; padding:8px 14px; border-radius:var(--pill);
-  transition:.25s var(--ease); opacity:0; animation:introRise .9s var(--ease) .85s forwards;}
-.intro-skip:hover{color:var(--text);}
-#tgIntroNext{margin-top:26px; min-width:240px;}
-#tgIntroNext[hidden]{display:none;}
+/* шаг привязки Telegram в знакомстве (устаревшие — оставлено для обратной совместимости) */
 
 /* экран-хаб */
 .hub-badge{display:inline-flex; align-items:center; gap:9px; font-size:12.5px; font-weight:650; color:var(--text);
@@ -576,9 +560,12 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
 
 /* ==================== ПОЛЬЗОВАТЕЛЬСКИЙ ШРИФТ ==================== */
 
-/* ==================== ПОВТОР ТУТОРИАЛА ==================== */
-.tutorial-repeat{display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--border);}
-.tutorial-repeat:last-of-type{border-bottom:0;}
+/* ==================== ДРОП-ЗОНА ==================== */
+.drop-zone{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  padding:36px 20px; border:2px dashed var(--border); border-radius:var(--radius-sm);
+  background:var(--field); cursor:pointer; transition:.3s var(--ease); color:var(--muted); font-size:14px;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--text); background:var(--surface-2); color:var(--text);}
+.drop-zone.drag-over{transform:scale(1.02);}
 
 /* ==================== ИНФО О СБОРКЕ ==================== */
 .build-info{text-align:center; padding:16px 0 4px; font-size:12px; color:var(--muted); opacity:.6;}
@@ -596,59 +583,32 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
 <div id="intro">
   <span class="orb orb1"></span><span class="orb orb2"></span><span class="orb orb3"></span>
 
-  <div class="intro-screen active" id="introS1">
+  <!-- ШАГ 1: ПРИВЕТСТВИЕ И ПОДПИСКА -->
+  <div class="intro-screen" id="introSub">
     <div class="intro-inner">
       <div class="ios-tile intro-icon intro-icon-float">
         <span class="glow"></span><span class="streak"></span>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v20M3.34 7 20.66 17M20.66 7 3.34 17"/>
-          <path d="M12 2l-2.2 2.2M12 2l2.2 2.2M12 22l-2.2-2.2M12 22l2.2-2.2"/>
-          <path d="M3.34 7l.1 3.1M3.34 7l3-.85M20.66 17l-.1-3.1M20.66 17l-3 .85"/>
-          <path d="M20.66 7l-3-.85M20.66 7l-.1 3.1M3.34 17l3 .85M3.34 17l.1-3.1"/>
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/>
+          <path d="M8.5 8.5h3.5v3.5M15.5 8.5h-4v4M15.5 15.5v-4h-4"/>
         </svg>
       </div>
-      <div class="intro-tag" data-i18n="intro_tag"></div>
-      <h1 class="intro-title">LEDOKOL HUB</h1>
-      <p class="intro-sub" data-i18n="intro_sub"></p>
+      <div class="intro-tag">LEDOKOL HUB</div>
+      <h1 class="intro-title" data-i18n="welcome_title"></h1>
+      <p class="intro-sub" data-i18n="welcome_sub"></p>
       <div class="sub-intro-form">
-        <input type="text" class="field" id="subIntroInput" placeholder="https://sub.ledokol.shop/..." spellcheck="false" autocomplete="off">
+        <input type="text" class="field" id="subInput" placeholder="https://sub.ledokol.shop/..." spellcheck="false" autocomplete="off">
       </div>
-      <p class="sub-intro-hint">Вставьте ссылку на подписку. Получить её можно у бота: <a href="#" data-ext="https://t.me/LEDOKOL_SALES_BOT?start=refOIzad06m" class="sub-intro-link">@LEDOKOL_SALES_BOT</a></p>
-      <button class="intro-btn" id="introTgBtn" disabled>
-        <span class="lbl" data-i18n="intro_btn"></span>
+      <p class="sub-intro-hint"><a href="#" data-ext="https://t.me/LEDOKOL_SALES_BOT?start=refOIzad06m" class="sub-intro-link" data-i18n="welcome_bot_link"></a></p>
+      <div class="intro-error" id="subError" hidden></div>
+      <button class="intro-btn" id="subNextBtn" disabled>
+        <span class="lbl" data-i18n="welcome_next"></span>
         <span class="spin"></span>
       </button>
-      <div class="intro-note" data-i18n="intro_note"></div>
     </div>
   </div>
 
-  <!-- шаг 2: привязка Telegram, чтобы профиль был личным с первого запуска -->
-  <div class="intro-screen" id="introTg">
-    <div class="intro-inner">
-      <div class="ios-tile intro-icon intro-icon-float" id="tgIntroTile">
-        <span class="glow"></span><span class="streak"></span>
-        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
-      </div>
-      <h1 class="intro-title" id="tgIntroTitle" data-i18n="tg_intro_title"></h1>
-      <p class="intro-sub" id="tgIntroSub" data-i18n="tg_intro_sub"></p>
-
-      <div class="tg-intro-form" id="tgIntroForm">
-        <input type="text" class="field" id="tgIntroInput" placeholder="@username" spellcheck="false">
-        <button class="intro-btn" id="tgIntroBtn">
-          <span class="lbl" data-i18n="tg_link"></span><span class="spin"></span>
-        </button>
-      </div>
-
-      <div class="tg-intro-card" id="tgIntroCard" hidden>
-        <img id="tgIntroAvatar" alt="">
-        <div><b id="tgIntroName"></b><i id="tgIntroUser"></i></div>
-      </div>
-
-      <button class="intro-btn" id="tgIntroNext" hidden><span class="lbl" data-i18n="hub_continue"></span></button>
-      <button class="intro-skip" id="tgIntroSkip" data-i18n="tg_intro_skip"></button>
-    </div>
-  </div>
-
+  <!-- ШАГ 2: ДОБРО ПОЖАЛОВАТЬ -->
   <div class="intro-screen" id="introS2">
     <div class="intro-inner">
       <div class="hub-badge" data-i18n="hub_badge"></div>
@@ -814,6 +774,17 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <div class="news-empty" data-i18n="news_loading"></div>
         </div>
       </div>
+      <div class="card">
+        <div class="news-header">
+          <div class="news-header-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.9 4.3 18.7 19.4c-.24 1.06-.87 1.32-1.76.82l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.94 9-8.13c.39-.35-.08-.54-.6-.19L6.36 13.2l-4.79-1.5c-1.04-.32-1.06-1.04.22-1.54l18.72-7.22c.87-.32 1.63.2 1.35 1.36z"/></svg>
+            <span data-i18n="news_channel_support"></span>
+          </div>
+        </div>
+        <div class="news-feed" id="supportFeed">
+          <div class="news-empty" data-i18n="news_loading"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ======================= ПРОФИЛЬ ======================= -->
@@ -924,6 +895,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
     <!-- ======================= НАСТРОЙКИ ======================= -->
     <section class="panel" id="panel-settings">
       <div class="card">
+        <h3 data-i18n="settings_connection"></h3>
         <div class="set-row">
           <span class="lbl" data-i18n="set_socks"></span>
           <input type="number" class="field ctl narrow" id="setSocks">
@@ -952,15 +924,19 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <span class="lbl" data-i18n="set_xray"></span>
           <input type="text" class="field ctl" id="setXray" placeholder="auto" spellcheck="false">
         </div>
-        <button class="btn" id="saveBtn" data-i18n="save_btn"></button>
         <div class="xray-status" id="xrayStatus"></div>
         <div class="xray-status" id="tunStatus"></div>
-        <div class="build-info" id="buildInfo"></div>
+        <button class="btn" id="saveBtn" data-i18n="save_btn"></button>
       </div>
       <div class="card">
         <h3 data-i18n="settings_bg"></h3>
         <p class="hint" data-i18n="settings_bg_hint"></p>
-        <div class="btn-row">
+        <!-- drag-and-drop зона -->
+        <div class="drop-zone" id="bgDropZone">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span data-i18n="bg_drop_hint"></span>
+        </div>
+        <div class="btn-row" style="margin-top:10px">
           <label class="btn ghost" for="bgUploadInput" style="cursor:pointer" data-i18n="settings_bg_upload"></label>
           <input type="file" id="bgUploadInput" accept="image/*" style="display:none">
           <button class="btn ghost" id="bgRemoveBtn" data-i18n="settings_bg_remove" style="display:none"></button>
@@ -968,6 +944,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
       </div>
       <div class="card">
         <h3 data-i18n="settings_colors"></h3>
+        <p class="hint" data-i18n="settings_colors_hint"></p>
         <div class="color-pick-row"><label data-i18n="color_bg"></label><input type="color" id="colorBg"></div>
         <div class="color-pick-row"><label data-i18n="color_text"></label><input type="color" id="colorText"></div>
         <div class="color-pick-row"><label data-i18n="color_accent"></label><input type="color" id="colorAccent"></div>
@@ -983,19 +960,14 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
           <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
         </div>
         <button class="btn ghost" id="fontApplyBtn" data-i18n="settings_font_apply" style="display:none"></button>
-        <div class="font-preview" id="fontPreview" hidden>Пример шрифта AaBbCc 123</div>
-      </div>
-      <div class="card">
-        <div class="tutorial-repeat">
-          <span class="lbl"><span data-i18n="settings_tutorial"></span><i data-i18n="settings_tutorial_hint"></i></span>
-          <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
-        </div>
+        <div class="font-preview" id="fontPreview" hidden></div>
       </div>
       <div class="card">
         <h3 data-i18n="diag_title"></h3>
         <p class="hint" id="dataDirText"></p>
         <div class="btn-row">
           <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
+          <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
         </div>
       </div>
       <div class="card">
@@ -1004,6 +976,8 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
         <div class="pv-row"><span data-i18n="sysinfo_date"></span><b id="sysinfoDate">-</b></div>
         <div class="pv-row"><span data-i18n="sysinfo_python"></span><b id="sysinfoPython">-</b></div>
         <div class="pv-row"><span data-i18n="sysinfo_platform"></span><b id="sysinfoPlatform">-</b></div>
+        <div class="pv-row" style="border-bottom:0"><span>Telegram</span><b><a href="#" data-ext="https://t.me/mimidevil" style="color:var(--text);text-decoration:none;">@mimidevil</a></b></div>
+        <div class="build-info" id="buildInfo"></div>
       </div>
     </section>
 
@@ -1091,13 +1065,15 @@ const I18N = {
     route_block_title:"Заблокировать",
     route_block_hint:"Всегда без доступа, в любом режиме. Поддерживаются готовые списки, например geosite:category-ads-all",
     route_order:"Порядок проверки: локальная сеть → «Заблокировать» → «В обход VPN» → режим. Что совпало первым, то и сработает.",
-    intro_tag:"Ledokol VPN",
-    intro_sub:"Быстрое и защищённое подключение без лишних настроек. Начните с нашего Telegram.",
-    intro_btn:"Продолжить", intro_note:"Вставьте ссылку из бота или пропустите шаг",
-    tg_intro_title:"Ваш профиль",
-    tg_intro_sub:"Введите свой @username в Telegram — подтянем имя и аватарку, чтобы профиль был вашим с первого запуска.",
-    tg_intro_skip:"Пропустить, настрою позже",
-    tg_intro_done:"Отлично, узнали вас",
+    welcome_title:"Добро пожаловать в LEDOKOL HUB",
+    welcome_sub:"Введите ключ подписки, чтобы начать. Ключ выглядит так: https://sub.ledokol.shop/ваш-ключ",
+    welcome_bot_link:"Нет ключа? Купить в боте →",
+    welcome_next:"Далее",
+    welcome_err_format:"Неверный формат. Ключ должен быть вида https://sub.ledokol.shop/...",
+    welcome_err_invalid:"Неверный ключ. Проверьте ссылку на подписку.",
+    welcome_err_empty:"Подписка пуста. Проверьте ключ.",
+    welcome_err_connect:"Подписка добавлена, но не удалось подключиться. Проверьте логи.",
+    welcome_success:"Подписка активна! Нажмите «Далее», чтобы продолжить",
     hub_badge:"Приложение для пользователей Ledokol VPN",
     hub_title:"Добро пожаловать",
     hub_p1:"Это клиент Ledokol VPN. Здесь вы подключаетесь к своим серверам, проверяете задержку и управляете соединением в пару касаний.",
@@ -1105,8 +1081,8 @@ const I18N = {
     hub_p3:"Чтобы начать — добавьте свой ключ или подписку во вкладке «Добавить». Приятного пользования!",
     hub_continue:"Продолжить",
     ql_news:"Новости", ql_news_sub:"Канал Ledokol",
-    tab_news:"Новости", news_channel:"Новости", news_loading:"Загрузка…",
-    news_no_posts:"Нет постов", news_notifications:"Уведомления",
+    tab_news:"Новости", news_channel:"Новости", news_channel_support:"Поддержка",
+    news_loading:"Загрузка…", news_no_posts:"Нет постов", news_notifications:"Уведомления",
     tutorial_skip:"Пропустить", tutorial_next:"Далее",
     tutorial_step1:"Серверы", tutorial_step1_d:"Здесь отображается список ваших серверов. Нажмите на сервер, чтобы выбрать его.",
     tutorial_step2:"Подключение", tutorial_step2_d:"Нажмите «Подключиться» для Establish VPN connection с выбранным сервером.",
@@ -1117,9 +1093,12 @@ const I18N = {
     err_tutorial_hint:"Пройдите туториал, чтобы разобраться с интерфейсом",
     err_html_response:"Панель вернула HTML-страницу вместо данных подписки. Проверьте ссылку.",
     err_ssl_error:"Ошибка SSL-сертификата. Попробуйте обновить сертификаты или проверьте настройки сети.",
-    settings_bg:"Фон", settings_bg_hint:"Загрузите изображение для фона приложения",
+    settings_connection:"Подключение",
+    settings_bg:"Фон", settings_bg_hint:"Перетащите изображение или нажмите «Загрузить»",
     settings_bg_upload:"Загрузить фон", settings_bg_remove:"Удалить фон",
-    settings_colors:"Цвета", settings_apply_colors:"Применить",
+    bg_drop_hint:"Перетащите изображение сюда",
+    settings_colors:"Цвета", settings_colors_hint:"Измените цвета интерфейса (сначала примените фон)",
+    settings_apply_colors:"Применить цвета",
     color_bg:"Фон", color_text:"Текст", color_accent:"Акцент", color_surface:"Поверхность",
     settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
     settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт", settings_font_apply:"Применить шрифт",
@@ -1196,13 +1175,15 @@ const I18N = {
     route_block_title:"Block",
     route_block_hint:"Always denied, in every mode. Ready-made lists work too, e.g. geosite:category-ads-all",
     route_order:"Check order: local network → Block → Bypass → mode. First match wins.",
-    intro_tag:"Ledokol VPN",
-    intro_sub:"Fast, secure connection with no fuss. Start with our Telegram.",
-    intro_btn:"Continue", intro_note:"Paste your subscription link or skip this step",
-    tg_intro_title:"Your profile",
-    tg_intro_sub:"Enter your Telegram @username — we will pull your name and avatar so the profile is yours from the very first launch.",
-    tg_intro_skip:"Skip, I'll set it up later",
-    tg_intro_done:"Great, we recognised you",
+    welcome_title:"Welcome to LEDOKOL HUB",
+    welcome_sub:"Enter your subscription key to get started. It looks like: https://sub.ledokol.shop/your-key",
+    welcome_bot_link:"No key? Buy in bot →",
+    welcome_next:"Next",
+    welcome_err_format:"Invalid format. The key should be https://sub.ledokol.shop/...",
+    welcome_err_invalid:"Invalid key. Check your subscription link.",
+    welcome_err_empty:"Subscription is empty. Check your key.",
+    welcome_err_connect:"Subscription added but connection failed. Check the logs.",
+    welcome_success:"Subscription active! Press «Next» to continue",
     hub_badge:"App for Ledokol VPN users",
     hub_title:"Welcome",
     hub_p1:"This is the Ledokol VPN client. Connect to your servers, check latency and manage the connection in a couple of taps.",
@@ -1210,8 +1191,8 @@ const I18N = {
     hub_p3:"To get started, add your key or subscription in the “Add” tab. Enjoy!",
     hub_continue:"Continue",
     ql_news:"News", ql_news_sub:"Ledokol channel",
-    tab_news:"News", news_channel:"News", news_loading:"Loading…",
-    news_no_posts:"No posts yet", news_notifications:"Notifications",
+    tab_news:"News", news_channel:"News", news_channel_support:"Support",
+    news_loading:"Loading…", news_no_posts:"No posts yet", news_notifications:"Notifications",
     tutorial_skip:"Skip", tutorial_next:"Next",
     tutorial_step1:"Servers", tutorial_step1_d:"Your server list is shown here. Tap a server to select it.",
     tutorial_step2:"Connect", tutorial_step2_d:"Press \"Connect\" to establish a VPN connection with the selected server.",
@@ -1222,9 +1203,12 @@ const I18N = {
     err_tutorial_hint:"Complete the tutorial to learn the interface",
     err_html_response:"The panel returned an HTML page instead of subscription data. Check the link.",
     err_ssl_error:"SSL certificate error. Try updating certificates or check your network settings.",
-    settings_bg:"Background", settings_bg_hint:"Upload an image for the app background",
+    settings_connection:"Connection",
+    settings_bg:"Background", settings_bg_hint:"Drag an image or click «Upload»",
     settings_bg_upload:"Upload background", settings_bg_remove:"Remove background",
-    settings_colors:"Colors", settings_apply_colors:"Apply",
+    bg_drop_hint:"Drop image here",
+    settings_colors:"Colors", settings_colors_hint:"Change interface colors (apply background first)",
+    settings_apply_colors:"Apply colors",
     color_bg:"Background", color_text:"Text", color_accent:"Accent", color_surface:"Surface",
     settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
     settings_font_upload:"Upload font", settings_font_remove:"Remove font", settings_font_apply:"Apply font",
@@ -1387,7 +1371,7 @@ function renderSaveError(){
 }
 $("saveErrBtn").addEventListener("click", ()=>{ if(api()) api().open_data_folder(); });
 
-/* ---------- интро (2 шага) ---------- */
+/* ---------- интро (приветствие → хаб → обучение) ---------- */
 function revealApp(){
   const intro=$("intro");
   if(intro){ intro.classList.add("gone"); setTimeout(()=>intro.remove(),700); }
@@ -1398,71 +1382,82 @@ function introGo(from, to){
   $(from).classList.remove("active");
   $(to).classList.add("active");
 }
-$("introTgBtn").addEventListener("click", async ()=>{
-  const b=$("introTgBtn");
-  const v=($("subIntroInput").value||"").trim();
-  if(!v){
-    toast("Вставьте ссылку на подписку", true); return;
-  }
-  if(!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)){
-    toast("Допустима только ссылка sub.ledokol.shop", true); return;
-  }
-  b.classList.add("loading"); b.disabled=true;
-  try{
-    const r=await api().import_subscription(v);
-    if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); b.disabled=false; return; }
-    STATE=r.state; renderServers(); updateConnectUI();
-    toast(t("sub_imported")||"Подписка добавлена, подключаю VPN...");
-    const c=await api().connect(0);
-    if(c.error){ toast(t("err_connect_fail")||"Не удалось подключиться. Проверьте ссылку на подписку.", true); b.classList.remove("loading"); b.disabled=false; return; }
-    STATE=c.state; updateConnectUI(); updateXrayStatus();
-    toast(t("connected")||"VPN подключён!");
-    introGo("introS1", "introTg");
-    showLinkedTg();
-    $("tgIntroInput").focus();
-  }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); b.disabled=false; }
-});
-$("subIntroInput").addEventListener("input", ()=>{
-  const v=($("subIntroInput").value||"").trim();
-  $("introTgBtn").disabled=!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v);
+
+let _subReady = false;
+
+$("subInput").addEventListener("input", () => {
+  if (_subReady) { _subReady = false; $("subNextBtn").disabled = true; }
 });
 
-/* ---------- шаг знакомства: привязка Telegram ---------- */
-function showLinkedTg(){
-  const s=(STATE.settings)||{};
-  if(!s.tg_username) return false;
-  $("tgIntroForm").hidden=true;
-  $("tgIntroCard").hidden=false;
-  $("tgIntroNext").hidden=false;
-  $("tgIntroSkip").hidden=true;
-  $("tgIntroName").textContent=s.tg_name || ("@"+s.tg_username);
-  $("tgIntroUser").textContent="@"+s.tg_username;
-  const av=$("tgIntroAvatar");
-  if(s.tg_avatar){ av.src=s.tg_avatar; av.hidden=false; } else { av.hidden=true; }
-  $("tgIntroSub").textContent=t("tg_intro_done");
-  return true;
-}
-async function linkFromIntro(){
-  const v=$("tgIntroInput").value.trim();
-  if(!v){ toast(t("tg_err_bad_username"), true); return; }
-  const b=$("tgIntroBtn"); b.classList.add("loading");
-  try{
-    const r=await api().link_telegram(v);
-    if(r.error){ toast(t("tg_err_"+r.error) || (t("err_generic")+r.error), true); return; }
-    STATE=r.state; renderProfile(); showLinkedTg();
-  }catch(e){ toast(t("err_generic")+e, true); }
-  finally{ b.classList.remove("loading"); }
-}
-$("tgIntroBtn").addEventListener("click", linkFromIntro);
-$("tgIntroInput").addEventListener("keydown",(e)=>{ if(e.key==="Enter") linkFromIntro(); });
-$("tgIntroSkip").addEventListener("click", ()=>introGo("introTg", "introS2"));
-$("tgIntroNext").addEventListener("click", ()=>introGo("introTg", "introS2"));
+$("subInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    if ($("subNextBtn").disabled) tryImportSub();
+    else $("subNextBtn").click();
+  }
+});
 
-$("introContinue").addEventListener("click", async ()=>{
-  try{ if(api()) STATE = await api().finish_intro(); }catch(e){}
+$("subInput").addEventListener("paste", () => {
+  setTimeout(tryImportSub, 150);
+});
+
+async function tryImportSub() {
+  const v = ($("subInput").value || "").trim();
+  if (!v) return;
+  if (!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)) {
+    showSubError(t("welcome_err_format")); return;
+  }
+  const btn = $("subNextBtn");
+  btn.classList.add("loading");
+  hideSubError();
+  try {
+    const r = await api().import_subscription(v);
+    if (r.error) {
+      const msg = r.error === "html_response" ? t("welcome_err_invalid")
+                 : r.error === "empty_sub" ? t("welcome_err_empty")
+                 : r.error === "wrong_domain" ? t("welcome_err_format")
+                 : t("err_"+r.error) || t("err_generic") + r.error;
+      showSubError(msg);
+      btn.classList.remove("loading");
+      return;
+    }
+    STATE = r.state;
+    const c = await api().connect(0);
+    if (c.error) {
+      showSubError(t("welcome_err_connect"));
+      btn.classList.remove("loading");
+      return;
+    }
+    STATE = c.state;
+    _subReady = true;
+    btn.disabled = false;
+    btn.classList.remove("loading");
+    toast(t("welcome_success"));
+  } catch (e) {
+    showSubError(t("err_generic") + e);
+    btn.classList.remove("loading");
+  }
+}
+
+function showSubError(msg) {
+  const el = $("subError");
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+function hideSubError() {
+  $("subError").hidden = true;
+}
+
+$("subNextBtn").addEventListener("click", () => {
+  if (!_subReady) return;
+  introGo("introSub", "introS2");
+});
+
+$("introContinue").addEventListener("click", async () => {
+  try { if (api()) STATE = await api().finish_intro(); } catch(e) {}
   revealApp();
-  if(!STATE.tutorial_done && !(STATE.sub && STATE.sub.url)){
-    setTimeout(()=>startTutorial(),600);
+  if (!STATE.tutorial_done) {
+    setTimeout(() => startTutorial(), 600);
   }
 });
 
@@ -2002,11 +1997,11 @@ async function checkNews(){
     if(!r||!r.ok) return;
     _newsDisabled=!!r.disabled;
     $("newsOffToggle").checked=_newsDisabled;
-    if(!r.html){
+    if(r.html){
+      renderNews("newsFeed", r.html, r.date);
+    }else{
       $("newsFeed").innerHTML=`<div class="news-empty">${t("news_no_posts")}</div>`;
-      return;
     }
-    renderNews(r.html, r.date, r.post_id);
     if(r.post_id && r.post_id!==_newsPostId && _newsPostId){
       const tab=document.querySelector('.tab[data-tab="news"]');
       if(tab && !tab.classList.contains("active")){
@@ -2018,13 +2013,23 @@ async function checkNews(){
     _newsPostId=r.post_id||"";
     if(api()) STATE=await api().save_settings({last_news_id:_newsPostId||""});
   }catch(e){}
+  try{
+    const sr=await api().get_support_news();
+    if(sr && sr.ok && sr.html){
+      renderNews("supportFeed", sr.html, sr.date);
+    }else{
+      // если постов нет — прячем блок
+      const card=$("supportFeed")?.closest(".card");
+      if(card) card.style.display="none";
+    }
+  }catch(e){}
 }
-function renderNews(html, date, postId){
+function renderNews(feedId, html, date){
   let dateStr="";
   if(date){
     try{const d=new Date(date);dateStr=d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){dateStr=date;}
   }
-  $("newsFeed").innerHTML=`<div class="news-post"><div class="news-post-body">${html}</div>${dateStr?`<div class="news-date">${dateStr}</div>`:''}</div>`;
+  $(feedId).innerHTML=`<div class="news-post"><div class="news-post-body">${html}</div>${dateStr?`<div class="news-date">${dateStr}</div>`:''}</div>`;
 }
 $("newsOffToggle").addEventListener("change", async ()=>{
   _newsDisabled=$("newsOffToggle").checked;
@@ -2044,6 +2049,38 @@ async function loadBg(){
     }
   }catch(e){}
 }
+
+/* ---------- drag-and-drop для фона ---------- */
+const dropZone=$("bgDropZone");
+if(dropZone){
+  ["dragenter","dragover"].forEach(ev=>{dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.add("drag-over");});});
+  ["dragleave","drop"].forEach(ev=>{dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.remove("drag-over");});});
+  dropZone.addEventListener("drop",e=>{
+    const file=e.dataTransfer.files[0];
+    if(file&&file.type.startsWith("image/")) uploadBgFile(file);
+    else toast("Пожалуйста, выберите изображение",true);
+  });
+  dropZone.addEventListener("click",()=>{$("bgUploadInput").click();});
+}
+async function uploadBgFile(file){
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    const b64=reader.result.split(",")[1];
+    if(api()){
+      const r=await api().upload_background(b64);
+      if(r&&r.ok){
+        document.body.style.setProperty("--bg-img","url("+reader.result+")");
+        document.body.classList.add("has-bg");
+        STATE=r.state||STATE;
+        if($("bgRemoveBtn")) $("bgRemoveBtn").style.display="";
+        enforceThemeForBg();
+        toast("Фон установлен");
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 $("bgUploadInput").addEventListener("change", async (e)=>{
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -2203,33 +2240,43 @@ async function initEnhanced(){
   renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
   CONFLICTS = STATE.conflicts || []; renderConflicts();
 
-  const hasTg = STATE.settings && STATE.settings.tg_username;
-  if((STATE.intro_done || (STATE.servers && STATE.servers.length)) && hasTg){
+  const hasSub = STATE.settings && STATE.settings.subscription_url;
+
+  // если подписка уже есть — пропускаем всё знакомство
+  if (hasSub && STATE.intro_done) {
     const intro=$("intro"); if(intro) intro.remove();
     document.body.classList.remove("intro-active");
     showApp();
-  }else if(STATE.intro_done && !hasTg){
-    document.body.classList.add("intro-active");
-    introGo("introS1","introTg");
-    showLinkedTg();
-    $("tgIntroInput").focus();
-  }else{
-    document.body.classList.add("intro-active");
+    if (!STATE.tutorial_done) setTimeout(() => startTutorial(), 600);
+    try{ checkNews(); }catch(e){}
+    return;
+  }
+
+  // если подписка есть, но интро не завершено — сразу на хаб
+  document.body.classList.add("intro-active");
+  if (hasSub) {
+    $("subInput").value = s.subscription_url || "";
+    _subReady = true;
+    $("subNextBtn").disabled = false;
+    $("subNextBtn").innerHTML = '<span class="lbl" data-i18n="welcome_next"></span>';
+    introGo("introSub", "introS2");
+  } else {
+    $("introSub").classList.add("active");
+    $("subInput").focus();
   }
 
   setInterval(tickEmoji, 60000);
   setInterval(async ()=>{
     if(!api() || document.hidden) return;
     try{
-      const s = await api().get_state();
-      const changed = s.tun_active!==STATE.tun_active || s.connected!==STATE.connected
-                   || s.is_admin!==STATE.is_admin || s.tun_found!==STATE.tun_found;
-      STATE = s;
+      const st = await api().get_state();
+      const changed = st.tun_active!==STATE.tun_active || st.connected!==STATE.connected
+                   || st.is_admin!==STATE.is_admin || st.tun_found!==STATE.tun_found;
+      STATE = st;
       if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
     }catch(e){}
   }, 5000);
 
-  // v2.1.0 additions — обёрнуты в try/catch, чтобы не ломали интро
   try{ await loadBg(); }catch(e){}
   try{ await loadFont(); }catch(e){}
   try{ loadColorPickers(); }catch(e){}
@@ -2241,9 +2288,6 @@ async function initEnhanced(){
       enforceThemeForBg();
     }
   }catch(e){}
-  if(!STATE.tutorial_done && STATE.intro_done && !(STATE.sub && STATE.sub.url)){
-    setTimeout(()=>startTutorial(),600);
-  }
   try{ checkNews(); }catch(e){}
 }
 if(window.pywebview && window.pywebview.api){ initEnhanced(); }

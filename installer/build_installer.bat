@@ -12,19 +12,32 @@ echo(
 echo ==== LDK2ray installer build ====
 echo(
 
-echo [1/4] Building LDK2ray.exe with Python 3.12...
+REM 1/5) Building LDK2ray.exe with Python 3.12...
+echo [1/5] Building LDK2ray.exe with Python 3.12...
 py -3.12 --version >nul 2>nul || ( echo [!] Python 3.12 not found. Run:  py install 3.12  & pause & exit /b 1 )
 py -3.12 -m pip install --upgrade pip >nul
 py -3.12 -m pip install -r requirements.txt pyinstaller
 py -3.12 -m PyInstaller --noconfirm --onedir --windowed --noupx --name LDK2ray --icon "ui/app.ico" --collect-all webview --collect-all pystray --add-data "ui;ui" main.py
 if not exist "dist\LDK2ray\LDK2ray.exe" ( echo [!] Build failed. & pause & exit /b 1 )
 
-echo [2/4] Staging runtime files next to the app...
+REM 2/5) Copy updated index.html (with subscription auth)
+echo [2/5] Copying updated index.html...
+if exist "dist\LDK2ray\index.html" (
+    echo   index.html exists (PyInstaller may have copied it)
+) else (
+    echo   index.html not found, attempting to copy from ui\\index.html
+    copy /y "ui\index.html" "dist\LDK2ray\" >nul
+)
+
+REM 3/5) Copy core runtime files
+REM xray.exe + tun2socks.exe + wintun.dll needed for "Tunnel" mode
+echo [3/5] Copying runtime files...
 for %%F in (xray.exe tun2socks.exe geoip.dat geosite.dat wintun.dll) do (
     if exist "%%F" ( copy /y "%%F" "dist\LDK2ray\" >nul ) else ( echo   [warn] missing %%F )
 )
 
-echo [3/4] Locating Inno Setup compiler (ISCC)...
+REM 4/5) Locate Inno Setup compiler (ISCC)...
+echo [4/5] Locating Inno Setup compiler (ISCC)...
 set "ISCC="
 for %%P in (iscc.exe) do if not defined ISCC set "ISCC=%%~$PATH:P"
 REM %LOCALAPPDATA% тоже проверяем: winget ставит Inno Setup для пользователя,
@@ -46,7 +59,8 @@ if not defined ISCC (
     pause & exit /b 1
 )
 
-echo [4/4] Compiling installer...
+REM 5/5) Compile installer
+echo [5/5] Compiling installer...
 "%ISCC%" "installer\LDK2ray.iss"
 if exist "installer\Output\LDK2ray-Setup.exe" (
     echo(

@@ -4,9 +4,9 @@
 ;  Собрать: installer\build_installer.bat  ->  installer\Output\LDK2ray-Setup.exe
 ; ============================================================
 
-#define MyAppName      "LDK2ray"
+#define MyAppName      "LEDOKOL HUB"
 #define MyAppVersion   "2.1.1"
-#define MyAppPublisher "mimidevil"
+#define MyAppPublisher "LEDOKOL"
 #define MyAppURL       "https://t.me/mimidevil"
 #define MyAppExeName   "LDK2ray.exe"
 
@@ -20,11 +20,11 @@ AppSupportURL={#MyAppURL}
 ; --- установка для пользователя, без UAC ---
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={autopf64}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
-UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayIcon={app}\\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 WizardStyle=modern
 Compression=lzma2/max
@@ -34,31 +34,31 @@ OutputBaseFilename=LDK2ray-Setup
 SetupIconFile=..\ui\app.ico
 
 [Languages]
-Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
+Name: "ru"; MessagesFile: "compiler:Languages\\Russian.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
 
 [Files]
-; onedir-сборка: забираем всю папку dist\LDK2ray (exe + _internal)
-Source: "..\dist\LDK2ray\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; onedir-сборка: забираем всю папку dist\\LDK2ray (exe + _internal)
+Source: "..\\dist\\LDK2ray\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; runtime-зависимости: xray core, tun2socks, wintun, geo-базы
-Source: "..\releases\LDK2ray\xray.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\releases\LDK2ray\tun2socks.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\releases\LDK2ray\wintun.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\releases\LDK2ray\geoip.dat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\releases\LDK2ray\geosite.dat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\releases\\LDK2ray\\xray.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\releases\\LDK2ray\\tun2socks.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\releases\\LDK2ray\\wintun.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\releases\\LDK2ray\\geoip.dat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\\releases\\LDK2ray\\geosite.dat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{app}\data"
-; Настройки и список серверов в {userappdata}\LDK2ray НЕ трогаем: обновление
+Type: filesandordirs; Name: "{app}\\data"
+; Настройки и список серверов в {userappdata}\\LDK2ray НЕ трогаем: обновление
 ; часто идёт через «удалить и поставить заново», и стирать их — значит терять
 ; подписку пользователя.

@@ -713,15 +713,17 @@ class Api:
 
     # ------------------------------------------------------------ новости
     def get_news(self):
-        """Получить последний пост из публичного Telegram-канала.
+        return self._fetch_channel_news("LEDOKOL_CHANNEL")
 
-        Возвращает HTML с форматированием (жирный, курсив, ссылки и т.д.).
-        """
+    def get_support_news(self):
+        return self._fetch_channel_news("ledokol_support")
+
+    def _fetch_channel_news(self, channel: str) -> dict:
+        """Получить последний пост из указанного Telegram-канала."""
         import re as _re
         import urllib.request
         import urllib.error
         import html as _html
-        channel = "LEDOKOL_CHANNEL"
         url = f"https://t.me/s/{channel}"
         try:
             req = urllib.request.Request(url, headers={

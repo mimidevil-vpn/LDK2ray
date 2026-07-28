@@ -25,6 +25,9 @@ echo [2/2] Building app (onedir - легче по памяти и быстрее
 REM --noupx: сжатие UPX ломает библиотеки WebView2 и вызывает подозрения антивирусов
 py -3.12 -m PyInstaller --noconfirm --onedir --windowed --noupx --name LDK2ray --icon "ui/app.ico" --collect-all webview --collect-all pystray --add-data "ui;ui" main.py
 
+REM -- Add authentication resources needed for subscription system
+py -3.12 -c "import os, shutil; dst = 'dist\\LDK2ray'; shutil.copy2('ui\\index.html', dst + '\\index.html')" 2>nul
+
 echo.
 echo [extra] Copying core + geo files next to the app...
 REM tun2socks.exe + wintun.dll нужны для режима "Туннель"
