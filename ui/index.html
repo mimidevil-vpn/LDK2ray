@@ -1046,6 +1046,8 @@ const I18N = {
     save_failed:"Не удалось сохранить — подробности в «Настройки → Папка с данными»",
     err_empty_url:"Укажите ссылку на подписку", err_empty_sub:"Подписка пуста или не распознана",
     err_wrong_domain:"Допустима только подписка sub.ledokol.shop",
+    err_connect_fail:"Не удалось подключиться. Проверьте ссылку на подписку.",
+    sub_imported:"Подписка добавлена, подключаю VPN...",
     err_no_links:"Не удалось разобрать ни одной ссылки", err_generic:"Ошибка: ",
     err_no_server:"Сервер не выбран", err_need_admin:"Для туннеля нужны права администратора",
     err_no_tun2socks:"Не найден tun2socks.exe — положите его рядом с приложением",
@@ -1090,7 +1092,7 @@ const I18N = {
     route_order:"Порядок проверки: локальная сеть → «Заблокировать» → «В обход VPN» → режим. Что совпало первым, то и сработает.",
     intro_tag:"Ledokol VPN",
     intro_sub:"Быстрое и защищённое подключение без лишних настроек. Начните с нашего Telegram.",
-    intro_btn:"Открыть Telegram", intro_note:"Откроем канал, затем продолжим",
+    intro_btn:"Продолжить", intro_note:"Вставьте ссылку из бота или пропустите шаг",
     tg_intro_title:"Ваш профиль",
     tg_intro_sub:"Введите свой @username в Telegram — подтянем имя и аватарку, чтобы профиль был вашим с первого запуска.",
     tg_intro_skip:"Пропустить, настрою позже",
@@ -1149,6 +1151,8 @@ const I18N = {
     save_failed:"Could not save — see Settings → Data folder",
     err_empty_url:"Enter a subscription link", err_empty_sub:"Subscription is empty or unrecognized",
     err_wrong_domain:"Only sub.ledokol.shop subscriptions are allowed",
+    err_connect_fail:"Connection failed. Check your subscription link.",
+    sub_imported:"Subscription added, connecting VPN...",
     err_no_links:"Could not parse any link", err_generic:"Error: ",
     err_no_server:"No server selected", err_need_admin:"Tunnel mode requires administrator rights",
     err_no_tun2socks:"tun2socks.exe not found — place it next to the app",
@@ -1193,7 +1197,7 @@ const I18N = {
     route_order:"Check order: local network → Block → Bypass → mode. First match wins.",
     intro_tag:"Ledokol VPN",
     intro_sub:"Fast, secure connection with no fuss. Start with our Telegram.",
-    intro_btn:"Open Telegram", intro_note:"We’ll open the channel, then continue",
+    intro_btn:"Continue", intro_note:"Paste your subscription link or skip this step",
     tg_intro_title:"Your profile",
     tg_intro_sub:"Enter your Telegram @username — we will pull your name and avatar so the profile is yours from the very first launch.",
     tg_intro_skip:"Skip, I'll set it up later",
@@ -1400,13 +1404,18 @@ $("introTgBtn").addEventListener("click", async ()=>{
     if(!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)){
       toast("Допустима только ссылка sub.ledokol.shop", true); return;
     }
-    b.classList.add("loading");
+    b.classList.add("loading"); b.disabled=true;
     try{
       const r=await api().import_subscription(v);
-      if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); return; }
+      if(r.error){ toast(t("err_"+r.error) || (t("err_generic")+r.error), true); b.classList.remove("loading"); b.disabled=false; return; }
       STATE=r.state; renderServers(); updateConnectUI();
-      b.classList.remove("loading");
-    }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); return; }
+      toast(t("sub_imported")||"Подписка добавлена, подключаю VPN...");
+      const c=await api().connect(0);
+      if(c.error){ toast(t("err_connect_fail")||"Не удалось подключиться. Проверьте ссылку на подписку.", true); b.classList.remove("loading"); b.disabled=false; return; }
+      STATE=c.state; updateConnectUI(); updateXrayStatus();
+      toast(t("connected")||"VPN подключён!");
+      b.classList.remove("loading"); b.disabled=false;
+    }catch(e){ toast(t("err_generic")+e, true); b.classList.remove("loading"); b.disabled=false; return; }
   }
   introGo("introS1", "introS2");
 });
