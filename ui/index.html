@@ -487,13 +487,17 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 /* ==================== КАСТОМНЫЙ ФОН ==================== */
 body.has-bg{
   background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-attachment:fixed;
+  background-attachment:scroll;
 }
 body.has-bg::before{opacity:.4;}
 body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
 body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
 body.has-bg .banner{background:rgba(5,5,5,.55); backdrop-filter:blur(18px) saturate(130%);
   -webkit-backdrop-filter:blur(18px) saturate(130%);}
+/* убираем полосы: фон не привязан к вьюпорту, элементы с blur не рвутся */
+body.has-bg::after{content:''; position:fixed; inset:0; z-index:-1;
+  background-image:var(--bg-img); background-size:cover; background-position:center;
+  background-attachment:scroll; pointer-events:none;}
 body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
 body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
 body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
@@ -608,7 +612,38 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
     </div>
   </div>
 
-  <!-- ШАГ 2: ДОБРО ПОЖАЛОВАТЬ -->
+  <!-- ШАГ 2: ПРИВЯЗКА ПРОФИЛЯ (TELEGRAM) -->
+  <div class="intro-screen" id="introProfile">
+    <div class="intro-inner">
+      <div class="ios-tile intro-icon intro-icon-float">
+        <span class="glow"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/>
+          <path d="M8.5 8.5h3.5v3.5M15.5 8.5h-4v4M15.5 15.5v-4h-4"/>
+        </svg>
+      </div>
+      <h2 class="intro-title" data-i18n="profile_title" style="font-size:32px"></h2>
+      <p class="intro-sub" data-i18n="profile_sub"></p>
+      <div id="introProfileForm" class="tg-form" style="margin-top:24px; opacity:0; animation:introRise .9s var(--ease) .7s forwards;">
+        <input type="text" class="field" id="introTgInput" placeholder="@username" spellcheck="false">
+        <button class="intro-btn" id="introTgLinkBtn" style="min-width:180px; height:54px; margin-top:0">
+          <span class="lbl" data-i18n="tg_link"></span>
+          <span class="spin"></span>
+        </button>
+      </div>
+      <div id="introProfileLinked" class="tg-linked" style="margin-top:24px; opacity:0; animation:introRise .9s var(--ease) .7s forwards;" hidden>
+        <img id="introTgAvatar" alt="" style="width:52px; height:52px; border-radius:16px; object-fit:cover; border:1px solid var(--border);">
+        <div class="tg-meta"><b id="introTgName"></b><i id="introTgUser"></i></div>
+      </div>
+      <p class="intro-note" data-i18n="profile_skip_note" style="cursor:pointer; color:var(--muted); text-decoration:underline;" onclick="skipProfileLink()"></p>
+      <button class="intro-btn" id="profileNextBtn" disabled>
+        <span class="lbl" data-i18n="welcome_next"></span>
+        <span class="spin"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ШАГ 3: ДОБРО ПОЖАЛОВАТЬ -->
   <div class="intro-screen" id="introS2">
     <div class="intro-inner">
       <div class="hub-badge" data-i18n="hub_badge"></div>
@@ -837,7 +872,10 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
         <div class="pv-row"><span data-i18n="prof_source"></span><b id="pvSource"></b></div>
         <div class="pv-row"><span data-i18n="prof_servers"></span><b id="pvServers"></b></div>
         <div class="pv-row" id="rowUpdated" hidden><span data-i18n="prof_updated"></span><b id="pvUpdated"></b></div>
-        <button class="btn ghost" id="refreshSubBtn" data-i18n="sub_refresh"></button>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn ghost" id="refreshSubBtn" data-i18n="sub_refresh"></button>
+          <button class="btn ghost" id="delAllServersBtn" data-i18n="del_all_servers"></button>
+        </div>
       </div>
 
       <div class="card">
@@ -949,27 +987,33 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.55);}
         <div class="color-pick-row"><label data-i18n="color_text"></label><input type="color" id="colorText"></div>
         <div class="color-pick-row"><label data-i18n="color_accent"></label><input type="color" id="colorAccent"></div>
         <div class="color-pick-row"><label data-i18n="color_surface"></label><input type="color" id="colorSurface"></div>
-        <button class="btn" id="applyColorsBtn" data-i18n="settings_apply_colors"></button>
-      </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn" id="applyColorsBtn" data-i18n="settings_apply_colors"></button>
+      <button class="btn ghost" id="resetColorsBtn" data-i18n="settings_reset_colors"></button>
+    </div>
+  </div>
       <div class="card">
         <h3 data-i18n="settings_font"></h3>
         <p class="hint" data-i18n="settings_font_hint"></p>
         <div class="font-row">
           <label class="btn ghost" for="fontUploadInput" style="cursor:pointer" data-i18n="settings_font_upload"></label>
           <input type="file" id="fontUploadInput" accept=".ttf" style="display:none">
-          <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
-        </div>
-        <button class="btn ghost" id="fontApplyBtn" data-i18n="settings_font_apply" style="display:none"></button>
-        <div class="font-preview" id="fontPreview" hidden></div>
+      <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
+    </div>
+    <div class="font-preview" id="fontPreview" hidden></div>
       </div>
-      <div class="card">
-        <h3 data-i18n="diag_title"></h3>
-        <p class="hint" id="dataDirText"></p>
-        <div class="btn-row">
-          <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
-          <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
-        </div>
-      </div>
+  <div class="card">
+    <h3 data-i18n="settings_tutorial"></h3>
+    <p class="hint" data-i18n="settings_tutorial_hint"></p>
+    <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
+  </div>
+  <div class="card">
+    <h3 data-i18n="diag_title"></h3>
+    <p class="hint" id="dataDirText"></p>
+    <div class="btn-row">
+      <button class="btn ghost" id="openDataBtn" data-i18n="open_data_dir"></button>
+    </div>
+  </div>
       <div class="card">
         <h3 data-i18n="sysinfo_title"></h3>
         <div class="pv-row"><span data-i18n="sysinfo_version"></span><b id="sysinfoVersion">-</b></div>
@@ -1050,6 +1094,7 @@ const I18N = {
     prof_expire:"Действует до", prof_traffic:"Трафик", prof_updated:"Обновлено",
     prof_rate:"Оцените приложение", support_btn:"Поддержать проект",
     sub_refresh:"Обновить подписку", sub_refreshed:"Подписка обновлена",
+    del_all_servers:"Удалить все серверы", del_all_confirm:"Удалить все серверы из подписки?", del_all_done:"Все серверы удалены",
     sub_left:"Осталось ", sub_used_of:" из ", sub_unlimited:"Безлимит",
     sub_days:"осталось дней: ", sub_expired:"Срок истёк", sub_forever:"Бессрочно",
     plan_test:"Тестовый доступ", status_active:"Активна", status_none:"Не настроена",
@@ -1072,16 +1117,19 @@ const I18N = {
     welcome_err_format:"Неверный формат. Ключ должен быть вида https://sub.ledokol.shop/...",
     welcome_err_invalid:"Неверный ключ. Проверьте ссылку на подписку.",
     welcome_err_empty:"Подписка пуста. Проверьте ключ.",
-    welcome_err_connect:"Подписка добавлена, но не удалось подключиться. Проверьте логи.",
-    welcome_success:"Подписка активна! Нажмите «Далее», чтобы продолжить",
-    hub_badge:"Приложение для пользователей Ledokol VPN",
+welcome_err_connect:"Подписка добавлена, но не удалось подключиться. Проверьте логи.",
+welcome_err_timeout:"Сервер не отвечает. Проверьте ключ или попробуйте позже.",
+welcome_success:"Подписка активна! Нажмите «Далее», чтобы продолжить",
+    profile_title:"Привяжите профиль", profile_sub:"Подключите Telegram, чтобы восстановить доступ к серверам на другом устройстве",
+profile_skip_note:"Пропустить — привяжу позже",
+hub_badge:"Приложение для пользователей Ledokol VPN",
     hub_title:"Добро пожаловать",
     hub_p1:"Это клиент Ledokol VPN. Здесь вы подключаетесь к своим серверам, проверяете задержку и управляете соединением в пару касаний.",
     hub_p2:"Режим «Прокси» направит в VPN браузеры и программы, а «Туннель» — вообще весь трафик системы. Можно включить оба сразу.",
     hub_p3:"Чтобы начать — добавьте свой ключ или подписку во вкладке «Добавить». Приятного пользования!",
     hub_continue:"Продолжить",
     ql_news:"Новости", ql_news_sub:"Канал Ledokol",
-    tab_news:"Новости", news_channel:"Новости", news_channel_support:"Поддержка",
+    tab_news:"Новости", news_channel:"Новости", news_channel_support:"Благодарности",
     news_loading:"Загрузка…", news_no_posts:"Нет постов", news_notifications:"Уведомления",
     tutorial_skip:"Пропустить", tutorial_next:"Далее",
     tutorial_step1:"Серверы", tutorial_step1_d:"Здесь отображается список ваших серверов. Нажмите на сервер, чтобы выбрать его.",
@@ -1098,10 +1146,10 @@ const I18N = {
     settings_bg_upload:"Загрузить фон", settings_bg_remove:"Удалить фон",
     bg_drop_hint:"Перетащите изображение сюда",
     settings_colors:"Цвета", settings_colors_hint:"Измените цвета интерфейса (сначала примените фон)",
-    settings_apply_colors:"Применить цвета",
+    settings_apply_colors:"Применить цвета", settings_reset_colors:"Сбросить",
     color_bg:"Фон", color_text:"Текст", color_accent:"Акцент", color_surface:"Поверхность",
     settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
-    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт", settings_font_apply:"Применить шрифт",
+    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт",
     settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
     settings_tutorial_repeat:"Повторить",
     settings_build:"Сборка",
@@ -1160,6 +1208,7 @@ const I18N = {
     prof_expire:"Valid until", prof_traffic:"Traffic", prof_updated:"Updated",
     prof_rate:"Rate the app", support_btn:"Support the project",
     sub_refresh:"Refresh subscription", sub_refreshed:"Subscription updated",
+    del_all_servers:"Delete all servers", del_all_confirm:"Delete all servers from subscription?", del_all_done:"All servers deleted",
     sub_left:"Left ", sub_used_of:" of ", sub_unlimited:"Unlimited",
     sub_days:"days left: ", sub_expired:"Expired", sub_forever:"No expiry",
     plan_test:"Test access", status_active:"Active", status_none:"Not set",
@@ -1183,15 +1232,18 @@ const I18N = {
     welcome_err_invalid:"Invalid key. Check your subscription link.",
     welcome_err_empty:"Subscription is empty. Check your key.",
     welcome_err_connect:"Subscription added but connection failed. Check the logs.",
+welcome_err_timeout:"Server not responding. Check your key or try again later.",
     welcome_success:"Subscription active! Press «Next» to continue",
-    hub_badge:"App for Ledokol VPN users",
+    profile_title:"Link your profile", profile_sub:"Connect Telegram to restore access to your servers on another device",
+profile_skip_note:"Skip — I'll link later",
+hub_badge:"App for Ledokol VPN users",
     hub_title:"Welcome",
     hub_p1:"This is the Ledokol VPN client. Connect to your servers, check latency and manage the connection in a couple of taps.",
     hub_p2:"Proxy mode sends browsers and apps through the VPN, Tunnel mode covers all system traffic. You can enable both.",
     hub_p3:"To get started, add your key or subscription in the “Add” tab. Enjoy!",
     hub_continue:"Continue",
     ql_news:"News", ql_news_sub:"Ledokol channel",
-    tab_news:"News", news_channel:"News", news_channel_support:"Support",
+    tab_news:"News", news_channel:"News", news_channel_support:"Thank-yous",
     news_loading:"Loading…", news_no_posts:"No posts yet", news_notifications:"Notifications",
     tutorial_skip:"Skip", tutorial_next:"Next",
     tutorial_step1:"Servers", tutorial_step1_d:"Your server list is shown here. Tap a server to select it.",
@@ -1208,10 +1260,10 @@ const I18N = {
     settings_bg_upload:"Upload background", settings_bg_remove:"Remove background",
     bg_drop_hint:"Drop image here",
     settings_colors:"Colors", settings_colors_hint:"Change interface colors (apply background first)",
-    settings_apply_colors:"Apply colors",
+    settings_apply_colors:"Apply colors", settings_reset_colors:"Reset",
     color_bg:"Background", color_text:"Text", color_accent:"Accent", color_surface:"Surface",
     settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
-    settings_font_upload:"Upload font", settings_font_remove:"Remove font", settings_font_apply:"Apply font",
+    settings_font_upload:"Upload font", settings_font_remove:"Remove font",
     settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
     settings_tutorial_repeat:"Repeat",
     settings_build:"Build",
@@ -1384,6 +1436,7 @@ function introGo(from, to){
 }
 
 let _subReady = false;
+let _subSavedUrl = "";
 
 $("subInput").addEventListener("input", () => {
   if (_subReady) { _subReady = false; $("subNextBtn").disabled = true; }
@@ -1421,6 +1474,8 @@ async function tryImportSub() {
       return;
     }
     STATE = r.state;
+    _subSavedUrl = v;
+    // подключиться и ждать пока статус не станет connected
     const c = await api().connect(0);
     if (c.error) {
       showSubError(t("welcome_err_connect"));
@@ -1428,6 +1483,22 @@ async function tryImportSub() {
       return;
     }
     STATE = c.state;
+    // ждём реального подключения (опрос до 30 сек)
+    let waited = 0;
+    while (waited < 30) {
+      await new Promise(r => setTimeout(r, 1000));
+      waited++;
+      try {
+        const st = await api().get_state();
+        STATE = st;
+        if (st.connected) break;
+      } catch(e) {}
+    }
+    if (!STATE.connected) {
+      showSubError(t("welcome_err_timeout"));
+      btn.classList.remove("loading");
+      return;
+    }
     _subReady = true;
     btn.disabled = false;
     btn.classList.remove("loading");
@@ -1450,7 +1521,60 @@ function hideSubError() {
 
 $("subNextBtn").addEventListener("click", () => {
   if (!_subReady) return;
-  introGo("introSub", "introS2");
+  introGo("introSub", "introProfile");
+  initIntroProfile();
+});
+
+/* ======================= ПРИВЯЗКА ПРОФИЛЯ В ИНТРО ======================= */
+let _profileSkipped = false;
+
+function initIntroProfile() {
+  const s = STATE.settings || {};
+  const linked = !!(s.tg_username);
+  $("introProfileForm").hidden = linked;
+  $("introProfileLinked").hidden = !linked;
+  if (linked) {
+    $("introTgName").textContent = s.tg_name || s.tg_username;
+    $("introTgUser").textContent = "@" + s.tg_username;
+    const av = $("introTgAvatar");
+    if (s.tg_avatar) { av.src = s.tg_avatar; av.hidden = false; } else { av.hidden = true; }
+  }
+  checkProfileNext();
+}
+
+function checkProfileNext() {
+  const linked = !!((STATE.settings||{}).tg_username);
+  $("profileNextBtn").disabled = !linked && !_profileSkipped;
+}
+
+function skipProfileLink() {
+  _profileSkipped = true;
+  $("profileNextBtn").disabled = false;
+}
+
+$("introTgInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("introTgLinkBtn").click();
+});
+
+$("introTgLinkBtn").addEventListener("click", async () => {
+  const v = $("introTgInput").value.trim();
+  if (!v) { toast(t("tg_err_bad_username"), true); return; }
+  const btn = $("introTgLinkBtn");
+  btn.classList.add("loading");
+  try {
+    const r = await api().link_telegram(v);
+    if (r.error) { toast(t("tg_err_"+r.error) || t("err_generic")+r.error, true); return; }
+    STATE = r.state;
+    $("introTgInput").value = "";
+    initIntroProfile();
+    toast(t("tg_ok"));
+  } catch(e) { toast(t("err_generic")+e, true); }
+  finally { btn.classList.remove("loading"); }
+});
+
+$("profileNextBtn").addEventListener("click", () => {
+  if ($("profileNextBtn").disabled) return;
+  introGo("introProfile", "introS2");
 });
 
 $("introContinue").addEventListener("click", async () => {
@@ -1692,6 +1816,15 @@ $("refreshSubBtn").addEventListener("click", async ()=>{
     STATE=r.state; renderServers(); renderProfile(); updateConnectUI(); toast(t("sub_refreshed"));
   }catch(e){ toast(t("err_generic")+e, true); }
   finally{ btn.disabled=false; btn.textContent=old; }
+});
+$("delAllServersBtn").addEventListener("click", async ()=>{
+  if(!confirm(t("del_all_confirm"))) return;
+  const btn=$("delAllServersBtn"); btn.disabled=true;
+  try{
+    const r=await api().delete_all_servers();
+    STATE=r; renderServers(); renderProfile(); updateConnectUI(); toast(t("del_all_done"));
+  }catch(e){ toast(t("err_generic")+e, true); }
+  finally{ btn.disabled=false; }
 });
 
 /* ============================ ПОДКЛЮЧЕНИЕ ============================ */
@@ -2015,10 +2148,12 @@ async function checkNews(){
   }catch(e){}
   try{
     const sr=await api().get_support_news();
-    if(sr && sr.ok && sr.html){
+    if(sr && sr.ok && sr.html && !/channel\s*created/i.test(sr.html)){
       renderNews("supportFeed", sr.html, sr.date);
+      const card=$("supportFeed")?.closest(".card");
+      if(card) card.style.display="";
     }else{
-      // если постов нет — прячем блок
+      // если постов нет или канал пуст — прячем блок
       const card=$("supportFeed")?.closest(".card");
       if(card) card.style.display="none";
     }
@@ -2160,6 +2295,20 @@ $("applyColorsBtn").addEventListener("click", async ()=>{
   }
   toast(t("saved"));
 });
+$("resetColorsBtn").addEventListener("click", async ()=>{
+  resetCustomColors();
+  if(api()){
+    STATE=await api().save_settings({
+      custom_bg:"", custom_text:"", custom_accent:"", custom_surface:""
+    });
+  }
+  // reset color inputs to defaults
+  $("colorBg").value = "#050505";
+  $("colorText").value = "#ffffff";
+  $("colorAccent").value = "#ffffff";
+  $("colorSurface").value = "rgba(255,255,255,.11)";
+  toast(t("saved"));
+});
 
 /* ============================ КАСТОМНЫЙ ШРИФТ ============================ */
 async function loadFont(){
@@ -2171,7 +2320,6 @@ async function loadFont(){
     if(r&&r.data){
       injectFont(r.data);
       if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
-      if($("fontApplyBtn")) $("fontApplyBtn").style.display="";
       if($("fontPreview")) $("fontPreview").hidden=false;
     }
   }catch(e){}
@@ -2193,7 +2341,6 @@ $("fontUploadInput").addEventListener("change", async (e)=>{
         injectFont(b64);
         STATE=r.state||STATE;
         if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
-        if($("fontApplyBtn")) $("fontApplyBtn").style.display="";
         if($("fontPreview")) $("fontPreview").hidden=false;
       }
     }
@@ -2204,16 +2351,7 @@ $("fontRemoveBtn").addEventListener("click", async ()=>{
   if(api()){const r=await api().remove_font();STATE=r.state||STATE;}
   const el=document.getElementById("customFontStyle");if(el)el.remove();
   if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="none";
-  if($("fontApplyBtn")) $("fontApplyBtn").style.display="none";
   if($("fontPreview")) $("fontPreview").hidden=true;
-});
-$("fontApplyBtn").addEventListener("click", async ()=>{
-  if(!api()) return;
-  try{
-    const r=await api().get_font();
-    if(r&&r.data) injectFont(r.data);
-  }catch(e){}
-  toast(t("saved"));
 });
 
 /* ============================ ИНФО О СБОРКЕ ============================ */
@@ -2252,14 +2390,15 @@ async function initEnhanced(){
     return;
   }
 
-  // если подписка есть, но интро не завершено — сразу на хаб
+  // если подписка есть, но интро не завершено — сразу на профиль
   document.body.classList.add("intro-active");
   if (hasSub) {
     $("subInput").value = s.subscription_url || "";
     _subReady = true;
     $("subNextBtn").disabled = false;
     $("subNextBtn").innerHTML = '<span class="lbl" data-i18n="welcome_next"></span>';
-    introGo("introSub", "introS2");
+    introGo("introSub", "introProfile");
+    initIntroProfile();
   } else {
     $("introSub").classList.add("active");
     $("subInput").focus();

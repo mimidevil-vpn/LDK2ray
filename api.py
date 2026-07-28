@@ -241,6 +241,12 @@ class Api:
                 self.selected = len(self.servers) - 1
         return self._state()
 
+    def delete_all_servers(self):
+        self.servers.clear()
+        self._save_servers()
+        self.selected = -1
+        return self._state()
+
     def select_server(self, index):
         if 0 <= index < len(self.servers):
             self.selected = index
