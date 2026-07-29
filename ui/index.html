@@ -8,7 +8,7 @@
 @font-face{font-family:'MinecraftSeven';src:url('font.ttf') format('truetype');font-weight:normal;font-display:swap;}
 
 :root{
-  --bg:#0a0a0c; --bg-2:#131315;
+  --bg:rgba(10,10,12,.78); --bg-2:rgba(19,19,21,.82);
   --text:#f0f0f0; --muted:#8a8a8e;
   --surface:rgba(255,255,255,.08);
   --surface-2:rgba(255,255,255,.14);
@@ -22,7 +22,7 @@
   --shadow:0 24px 60px rgba(0,0,0,.5);
   --shadow-sm:0 12px 32px rgba(0,0,0,.4);
   --ease:cubic-bezier(.16,1,.3,1);
-  --radius:26px; --radius-sm:18px; --pill:999px;
+  --radius:18px; --radius-sm:14px; --pill:999px;
   --snow-color:rgba(255,255,255,.6);
   --snow-size-base:1px;
   --snow-size-random:1.2;
@@ -54,7 +54,7 @@ body:not(.snow-enabled) snow {
 
 .topbar { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 nav { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.card, .mode-chip, .server-card, .banner { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.card, .mode-chip, .server-card { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 
 set-row {
   background: var(--surface-2); border-radius: var(--radius-sm); margin: 4px 0; padding: 12px;
@@ -124,7 +124,8 @@ body{
   color:var(--text); background:var(--bg); overflow:hidden;
   transition:background .45s var(--ease),color .35s var(--ease);
 }
-body.theme-light .app, body.theme-light .topbar, body.theme-light nav, body.theme-light .mode-chip, body.theme-light .server-card, body.theme-light .card, body.theme-light .banner, body.theme-light .toast {
+body.theme-light .app, body.theme-light .topbar, body.theme-light nav, body.theme-light .mode-chip, body.theme-light .server-card, body.theme-light .card, body.theme-light .toast, body.theme-light .panel {
+  --bg: rgba(244,244,242,.82); --bg-2: rgba(236,234,230,.85);
   --border: rgba(0,0,0,.06);
   --surface-2: rgba(255,255,255,.5);
   --surface: rgba(255,255,255,.35);
@@ -240,23 +241,7 @@ body::before{
 .mode-tile.on .sw{background:var(--text); border-color:var(--text);}
 .mode-tile.on .sw::after{transform:translateX(18px); background:var(--bg);}
 
-/* ==================== БАННЕРЫ ==================== */
-.banner{display:flex; align-items:center; gap:14px; padding:13px 18px; border-radius:var(--radius-sm);
-  border:1px solid var(--border-strong); background:var(--surface-2);}
-.banner[hidden]{display:none;}
-.banner-ic{flex:none; width:34px; height:34px; display:grid; place-items:center; border-radius:10px;
-  background:var(--field); border:1px solid var(--border);}
-.banner-ic svg{width:19px; height:19px;}
-.banner-tx{flex:1; min-width:0; font-size:13.5px; line-height:1.4;}
-.banner-tx b{display:block; font-weight:700;}
-.banner-tx span{color:var(--muted);}
-.banner-x{flex:none; width:30px; height:30px; border:0; background:transparent; color:var(--muted);
-  cursor:pointer; border-radius:9px; font-size:15px; transition:.2s var(--ease);}
-.banner-x:hover{background:var(--text); color:var(--bg);}
-.banner-btn{flex:none; border:0; cursor:pointer; background:var(--btn-bg); color:var(--btn-fg);
-  font-weight:700; font-size:12.5px; padding:9px 16px; border-radius:var(--pill);
-  font-family:inherit; transition:.25s var(--ease);}
-.banner-btn:hover{transform:translateY(-1px);}
+
 
 /* ==================== БЫСТРЫЕ ССЫЛКИ ==================== */
 .quick-links{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
@@ -439,9 +424,11 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 .toast{position:fixed; bottom:26px; left:50%; transform:translate(-50%,140%);
   background:var(--surface-2); border:1px solid var(--border);
   border-radius:var(--pill); padding:13px 24px; font-size:14px; font-weight:650; box-shadow:var(--shadow);
-  z-index:150; transition:transform .45s var(--ease); max-width:80vw; color:var(--text);
-  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
-.toast.show{transform:translate(-50%,0);} .toast.err{border-color:var(--border-strong);}
+  z-index:150; transition:transform .45s var(--ease),opacity .45s var(--ease); max-width:80vw; color:var(--text);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  opacity:0; pointer-events:none; visibility:hidden;}
+.toast.show{transform:translate(-50%,0); opacity:1; pointer-events:auto; visibility:visible;}
+.toast.err{border-color:var(--border-strong);}
 
 /* ==================== ИКОНКА-ПЛИТКА (iOS 26 liquid glass) ==================== */
 /* без backdrop-filter: на монохромном фоне он незаметен, но при анимации
@@ -467,7 +454,7 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 @keyframes ringWave{to{transform:scale(1); opacity:0;}}
 
 /* ==================== ИНТРО (2 экрана) ==================== */
-#intro{position:fixed; inset:0; z-index:200; overflow:hidden; background:var(--bg);
+#intro{position:fixed; inset:0; z-index:200; overflow:hidden; background:rgba(10,10,12,.98);
   transition:opacity .7s var(--ease),transform .7s var(--ease);}
 #intro.gone{opacity:0; transform:scale(1.05); pointer-events:none;}
 .orb{position:absolute; border-radius:50%; background:var(--surface-2); border:1px solid var(--border);
@@ -543,17 +530,25 @@ textarea{min-height:120px; resize:vertical; font-family:ui-monospace,Consolas,mo
 /* ==================== КАСТОМНЫЙ ФОН ==================== */
 body.has-bg{
   background-image:var(--bg-img); background-size:cover; background-position:center;
-  background-attachment:fixed; background-color:#0a0a0a;}
+  background-attachment:fixed; background-color:transparent;}
 body.has-bg::before,body.has-bg::after{display:none;}
+body.has-bg nav{background:rgba(10,10,12,.25); backdrop-filter:blur(24px) saturate(130%);
+  -webkit-backdrop-filter:blur(24px) saturate(130%);}
+body.has-bg .main{background:rgba(10,10,12,.15);}
+body.has-bg .topbar{background:rgba(19,19,21,.25); backdrop-filter:blur(24px) saturate(130%);
+  -webkit-backdrop-filter:blur(24px) saturate(130%);}
 body.has-bg .glass, body.has-bg .card, body.has-bg .mode-tile, body.has-bg .server-card,
-body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast,
-body.has-bg .banner{background:rgba(5,5,5,.6); backdrop-filter:blur(18px) saturate(130%);
+body.has-bg .quick-links .qlink, body.has-bg .log-box, body.has-bg .toast{background:rgba(5,5,5,.5); backdrop-filter:blur(18px) saturate(130%);
   -webkit-backdrop-filter:blur(18px) saturate(130%);}
 body.has-bg .connect-btn{box-shadow:0 14px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);}
+body.has-bg.theme-light nav{background:rgba(244,244,242,.25); backdrop-filter:blur(24px) saturate(130%);
+  -webkit-backdrop-filter:blur(24px) saturate(130%);}
+body.has-bg.theme-light .main{background:rgba(244,244,242,.15);}
+body.has-bg.theme-light .topbar{background:rgba(236,234,230,.3); backdrop-filter:blur(24px) saturate(130%);
+  -webkit-backdrop-filter:blur(24px) saturate(130%);}
 body.has-bg.theme-light .glass, body.has-bg.theme-light .card, body.has-bg.theme-light .mode-tile,
 body.has-bg.theme-light .server-card, body.has-bg.theme-light .quick-links .qlink,
-body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast,
-body.has-bg.theme-light .banner{background:rgba(244,244,242,.6);}
+body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast{background:rgba(244,244,242,.5);}
 
 /* ==================== ТУТОРИАЛ (6 шагов) ==================== */
 .tutorial-overlay{position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.72);
@@ -610,10 +605,7 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.6);}
 .font-row{display:flex; align-items:center; gap:10px; padding:8px 0;}
 .font-row input[type=file]{display:none;}
 .font-row .btn{margin-top:0; padding:8px 14px; font-size:12.5px;}
-.font-preview{font-size:16px; margin-top:8px; padding:8px; background:var(--field); border-radius:10px;
-  border:1px solid var(--border); text-align:center;}
 
-/* ==================== ПОЛЬЗОВАТЕЛЬСКИЙ ШРИФТ ==================== */
 
 /* ==================== ДРОП-ЗОНА ==================== */
 .drop-zone{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
@@ -634,9 +626,9 @@ body.has-bg.theme-light .banner{background:rgba(244,244,242,.6);}
 /* ===== SIDEBAR LAYOUT v3 ===== */
 body{display:flex;flex-direction:column;min-height:100vh}
 body:not(.intro-active){display:flex;flex-direction:row}
-.app{display:none;flex:1;min-height:0}
+.app{display:none;flex:1;min-height:0;border-radius:var(--radius);overflow:hidden}
 body:not(.intro-active) .app{display:flex;flex-direction:row;min-height:100vh}
-nav{width:220px;flex:none;background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0;flex-shrink:0;border-radius:var(--radius) 0 0 var(--radius);}
+nav{width:220px;flex:none;background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0;flex-shrink:0;}
 nav .brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;letter-spacing:-.01em}
 nav .brand svg{width:32px;height:32px;flex:none}
 nav .nav-items{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
@@ -649,7 +641,7 @@ nav .nav-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;
 nav .nav-foot .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 nav .nav-foot .dot.on{background:#34c759}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);gap:16px;flex:none;background:var(--bg-2);border-radius:var(--radius) var(--radius) 0 0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);gap:16px;flex:none;background:var(--bg-2)}
 .topbar-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1}
 .topbar-right{display:flex;align-items:center;gap:10px;flex:none}
 .status-dot{width:14px;height:14px;border-radius:50%;flex:none;background:var(--muted);transition:.3s var(--ease)}
@@ -822,24 +814,7 @@ nav .nav-foot .dot.on{background:#34c759}
     <div class="content">
 
 
-      <div class="banner" id="adminBanner" hidden>
-        <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3.4v5c0 4.3-3.1 8.2-7.5 9.6-4.4-1.4-7.5-5.3-7.5-9.6v-5z"/><path d="M12 9v3.5M12 16v.01"/></svg></span>
-        <div class="banner-tx"><b data-i18n="admin_title"></b><span data-i18n="admin_sub"></span></div>
-        <button class="banner-btn" id="adminBtn" data-i18n="admin_btn"></button>
-        <button class="banner-x" id="adminClose">✕</button>
-      </div>
 
-      <div class="banner" id="conflictBanner" hidden>
-        <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.4v.01"/></svg></span>
-        <div class="banner-tx"><b data-i18n="conflict_title"></b><span id="conflictNames"></span></div>
-        <button class="banner-x" id="conflictClose">✕</button>
-      </div>
-
-      <div class="banner" id="saveBanner" hidden>
-        <span class="banner-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.4v.01"/></svg></span>
-        <div class="banner-tx"><b data-i18n="save_fail_title"></b><span id="saveErrText"></span></div>
-        <button class="banner-btn" id="saveErrBtn" data-i18n="open_data_dir"></button>
-      </div>
 
     <section class="panel active" id="panel-servers">
       <div class="mode-row">
@@ -1065,11 +1040,11 @@ nav .nav-foot .dot.on{background:#34c759}
         <h3 data-i18n="settings_font"></h3>
         <p class="hint" data-i18n="settings_font_hint"></p>
         <div class="font-row">
+          <input type="text" class="field" id="fontNameField" data-i18n="settings_font_placeholder" readonly>
           <label class="btn ghost" for="fontUploadInput" style="cursor:pointer" data-i18n="settings_font_upload"></label>
           <input type="file" id="fontUploadInput" accept=".ttf" style="display:none">
-      <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
-    </div>
-    <div class="font-preview" id="fontPreview" hidden></div>
+          <button class="btn ghost" id="fontRemoveBtn" data-i18n="settings_font_remove" style="display:none"></button>
+        </div>
       </div>
   <div class="card">
     <h3 data-i18n="settings_tutorial"></h3>
@@ -1219,7 +1194,7 @@ hub_badge:"Приложение для пользователей Ledokol VPN",
     settings_apply_colors:"Применить цвета", settings_reset_colors:"Сбросить",
     color_bg:"Фон", color_text:"Текст", color_accent:"Акцент", color_surface:"Поверхность",
     settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
-    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт",
+    settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт", settings_font_placeholder:"Системный шрифт",
     settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
     settings_tutorial_repeat:"Повторить",
     settings_build:"Сборка",
@@ -1333,7 +1308,7 @@ hub_badge:"App for Ledokol VPN users",
     settings_apply_colors:"Apply colors", settings_reset_colors:"Reset",
     color_bg:"Background", color_text:"Text", color_accent:"Accent", color_surface:"Surface",
     settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
-    settings_font_upload:"Upload font", settings_font_remove:"Remove font",
+    settings_font_upload:"Upload font", settings_font_remove:"Remove font", settings_font_placeholder:"System font",
     settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
     settings_tutorial_repeat:"Repeat",
     settings_build:"Build",
@@ -1472,26 +1447,22 @@ async function tickEmoji(){
 }
 
 /* ---------- сторонние VPN ---------- */
-window.__pushConflicts=(list)=>{ CONFLICTS=list||[]; renderConflicts(); };
+let _lastConflicts="";
 function renderConflicts(){
-  const b=$("conflictBanner"); if(!b) return;
-  if(CONFLICTS && CONFLICTS.length){
-    $("conflictNames").textContent = " " + CONFLICTS.join(", ");
-    b.hidden = false;
-  }else{
-    b.hidden = true;
+  const key=CONFLICTS.join(",");
+  if(CONFLICTS && CONFLICTS.length && key!==_lastConflicts){
+    _lastConflicts=key;
+    _baseToast(t("conflict_warn")+CONFLICTS.join(", "), true, 6000);
   }
 }
-$("conflictClose").addEventListener("click",()=>{ $("conflictBanner").hidden = true; });
+window.__pushConflicts=(list)=>{ CONFLICTS=list||[]; renderConflicts(); };
 
 /* ---------- предупреждение о несохранении ---------- */
+let _lastSaveErr="";
 function renderSaveError(){
-  const b=$("saveBanner"); if(!b) return;
   const err=STATE.save_error||"";
-  b.hidden = !err;
-  if(err) $("saveErrText").textContent = " " + err;
+  if(err && err!==_lastSaveErr){ _lastSaveErr=err; _baseToast(t("save_fail_title")+": "+err, true, 8000); }
 }
-$("saveErrBtn").addEventListener("click", ()=>{ if(api()) api().open_data_folder(); });
 
 /* ---------- интро (приветствие → хаб → обучение) ---------- */
 function revealApp(){
@@ -1647,7 +1618,7 @@ function renderModes(){
     : ((STATE.is_admin===false) ? t("mode_tun_admin") : t("mode_tun_sub"));
   // баннер с предложением перезапуска показываем, только когда туннель нужен
   const need = !!s.tun_mode && !STATE.is_admin;
-  $("adminBanner").hidden = !need;
+  if(need && !window._adminNotified){ window._adminNotified=true; toast(t("err_need_admin")+". "+t("admin_sub"), true); }
   if(!proxy && !tun && !STATE.connected) $("statusSub").textContent = t("mode_none");
 }
 async function toggleMode(which){
@@ -1660,7 +1631,13 @@ async function toggleMode(which){
     // приложение могли открыть до того, как состояние догрузилось
     try{ STATE = await api().get_state(); updateXrayStatus(); }catch(e){}
     if(STATE.tun_found===false){ toast(t("tun_no"), true); return; }
-    if(STATE.is_admin===false){ $("adminBanner").hidden=false; toast(t("err_need_admin"), true); return; }
+    if(STATE.is_admin===false){
+      toast(t("err_need_admin")+". "+t("admin_sub"), true);
+      const r2=await api().request_admin();
+      if(r2 && r2.error){ toast(t("admin_denied"), true); return; }
+      STATE = (await api().get_state())||STATE;
+      if(!STATE.is_admin) return;
+    }
   }
   const r=await api().set_modes(patch);
   if(r.error){
@@ -1671,11 +1648,6 @@ async function toggleMode(which){
 }
 $("modeProxy").addEventListener("click", ()=>toggleMode("proxy"));
 $("modeTun").addEventListener("click", ()=>toggleMode("tun"));
-$("adminClose").addEventListener("click", ()=>{ $("adminBanner").hidden=true; });
-$("adminBtn").addEventListener("click", async ()=>{
-  const r=await api().request_admin();
-  if(r && r.error) toast(t("admin_denied"), true);
-});
 
 /* ============================ СЕРВЕРЫ ============================ */
 function renderServers(){
@@ -1885,7 +1857,7 @@ $("connectBtn").addEventListener("click", async ()=>{
   if(r.error){
     const known=I18N[LANG]["err_"+r.error];
     toast(known || (t("err_generic")+r.error), true);
-    if(r.error==="need_admin") $("adminBanner").hidden=false;
+    if(r.error==="need_admin") toast(t("err_need_admin")+". "+t("admin_sub"), true);
     updateConnectUI(); return;
   }
   STATE=r.state; updateConnectUI(); startUptime(); renderModes();
@@ -2057,11 +2029,11 @@ document.querySelectorAll(".lang-toggle button").forEach(b=>
 
 /* ---------- тост ---------- */
 let toastTimer=null;
-window._baseToast=function(msg,isErr){
+window._baseToast=function(msg,isErr,duration){
   const el=$("toast"); el.textContent=msg;
   el.className="toast show"+(isErr?" err":"");
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>{el.className="toast"+(isErr?" err":"");},3200);
+  toastTimer=setTimeout(()=>{el.className="toast"+(isErr?" err":"");}, duration||3200);
 };
 function toast(msg,isErr){
   window._baseToast(msg,isErr);
@@ -2329,12 +2301,12 @@ async function loadFont(){
   if(!api()) return;
   try{
     const s=STATE.settings||{};
-    if(!s.has_custom_font) return;
+    if(!s.has_custom_font){ if($("fontNameField")) $("fontNameField").value=""; return; }
     const r=await api().get_font();
     if(r&&r.data){
       injectFont(r.data);
       if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
-      if($("fontPreview")) $("fontPreview").hidden=false;
+      if($("fontNameField")) $("fontNameField").value=r.name||t("settings_font_upload");
     }
   }catch(e){}
 }
@@ -2355,7 +2327,7 @@ $("fontUploadInput").addEventListener("change", async (e)=>{
         injectFont(b64);
         STATE=r.state||STATE;
         if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="";
-        if($("fontPreview")) $("fontPreview").hidden=false;
+        if($("fontNameField")) $("fontNameField").value=file.name;
       }
     }
   };
@@ -2365,7 +2337,7 @@ $("fontRemoveBtn").addEventListener("click", async ()=>{
   if(api()){const r=await api().remove_font();STATE=r.state||STATE;}
   const el=document.getElementById("customFontStyle");if(el)el.remove();
   if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="none";
-  if($("fontPreview")) $("fontPreview").hidden=true;
+  if($("fontNameField")) $("fontNameField").value="";
 });
 
 /* ============================ ИНФО О СБОРКЕ ============================ */
