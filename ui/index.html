@@ -153,8 +153,7 @@ body::before{
 
 /* ==================== КОМПОНОВКА ==================== */
 .app{
-  position:relative; z-index:1; height:100vh; padding:16px 22px 20px;
-  display:flex; flex-direction:column; gap:12px; max-width:1120px; margin:0 auto;
+  position:relative; z-index:1;
   opacity:0; transform:translateY(8px);
   transition:opacity .8s var(--ease),transform .8s var(--ease);
 }
@@ -292,7 +291,7 @@ body::before{
 
 /* ==================== КОНТЕНТ (жидкий переход) ==================== */
 .content{flex:1; min-height:0; position:relative;}
-.panel{position:absolute; inset:0; display:none; overflow-y:auto; padding:2px; border-radius:18px;
+.panel{position:absolute; inset:0; display:none; overflow-y:auto; padding:2px; border-radius:18px;}
 .panel.active{display:block; animation:panelIn .5s var(--ease);}
 @keyframes panelIn{
   from{opacity:0; transform:translateY(14px) scale(.99); filter:blur(6px);}
@@ -641,7 +640,7 @@ nav{width:220px;flex:none;background:var(--bg-2);border-right:1px solid var(--bo
 nav .brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;letter-spacing:-.01em}
 nav .brand svg{width:32px;height:32px;flex:none}
 nav .nav-items{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
-nav .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);color:var(--muted);transition:.2s var(--ease);font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;text-align:left;width:100}
+nav .nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);color:var(--muted);transition:.2s var(--ease);font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;text-align:left;width:100%}
 nav .nav-item:hover{background:var(--surface);color:var(--text)}
 nav .nav-item.active{background:var(--surface-2);color:var(--text);font-weight:600}
 nav .nav-item svg{width:18px;height:18px;flex:none;opacity:.7}
@@ -665,8 +664,7 @@ nav .nav-foot .dot.on{background:#34c759}
 .connect-btn.connecting{pointer-events:none;opacity:.6}
 .connect-btn.connected{background:#34c759;color:#fff}
 .content{flex:1;overflow-y:auto;padding:20px 24px;position:relative}
-.panel{display:none}
-.panel.active{display:block}
+
 .panel h2.panel-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-.02em}
 .mode-row{display:flex;gap:10px;margin-bottom:18px}
 .mode-chip{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--pill);font-size:13px;font-weight:500;color:var(--muted);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:.2s var(--ease)}
@@ -2079,7 +2077,7 @@ applyTheme(); applyLang("ru");
 const TUTORIAL_STEPS=[
   {target:".server-list",title:"tutorial_step1",desc:"tutorial_step1_d"},
   {target:"#connectBtn",title:"tutorial_step2",desc:"tutorial_step2_d"},
-  {target:".modes",title:"tutorial_step3",desc:"tutorial_step3_d"},
+  {target:".mode-row",title:"tutorial_step3",desc:"tutorial_step3_d"},
   {target:"#panel-routes",tab:"routes",title:"tutorial_step4",desc:"tutorial_step4_d"},
   {target:"#panel-settings",tab:"settings",title:"tutorial_step5",desc:"tutorial_step5_d"},
   {target:"#panel-logs",tab:"logs",title:"tutorial_step6",desc:"tutorial_step6_d"}

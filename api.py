@@ -27,7 +27,8 @@ EMOJI_PERIOD = 3600           # секунд между сменами
 
 
 class Api:
-    # Версия приложения (обновляется при сборке)
+    # Версия приложения — build скрипты подставляют реальную из git describe
+    # Для dev-режима (из исходников) — git describe в runtime
     BUILD_VERSION = "2.1.3"
     BUILD_DATE = "2026-07-28"
 
@@ -708,10 +709,25 @@ class Api:
         return self._state()
 
     # ------------------------------------------------------------ билд
+    def _resolve_version(self):
+        import os, subprocess, sys as _sys
+        if getattr(_sys, 'frozen', False):
+            return self.BUILD_VERSION
+        try:
+            tag = subprocess.check_output(
+                ["git", "describe", "--tags", "--always"],
+                stderr=subprocess.DEVNULL, text=True
+            ).strip()
+            if tag:
+                return tag.lstrip("v") if tag.startswith("v") else tag
+        except Exception:
+            pass
+        return self.BUILD_VERSION
+
     def get_build_info(self):
         """Информация о сборке для отображения в настройках."""
         return {
-            "version": self.BUILD_VERSION,
+            "version": self._resolve_version(),
             "date": self.BUILD_DATE,
             "python": __import__("sys").version.split()[0],
             "platform": __import__("platform").platform(),

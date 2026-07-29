@@ -17,8 +17,18 @@ echo [1/5] Building LDK2ray.exe with Python 3.12...
 py -3.12 --version >nul 2>nul || ( echo [!] Python 3.12 not found. Run:  py install 3.12  & pause & exit /b 1 )
 py -3.12 -m pip install --upgrade pip >nul
 py -3.12 -m pip install -r requirements.txt pyinstaller
+
+REM Inject real version from git
+echo [1b] Injecting version from git tag...
+for /f "usebackq delims=" %%V in (`git describe --tags --always`) do set "RAW_VER=%%V"
+echo   Version: %RAW_VER%
+REM api.py
+powershell -NoProfile -Command "$v='%RAW_VER%'.TrimStart('v'); $c=Get-Content api.py; $c=$c -replace 'BUILD_VERSION = \".*?\"', ('BUILD_VERSION = \"'+$v+'\"'); Set-Content api.py $c"
+REM LDK2ray.iss
+powershell -NoProfile -Command "$v='%RAW_VER%'.TrimStart('v'); $c=Get-Content installer\LDK2ray.iss; $c=$c -replace '#define MyAppVersion\s+\".*?\"', ('#define MyAppVersion   \"'+$v+'\"'); Set-Content installer\LDK2ray.iss $c"
+
 py -3.12 -m PyInstaller --noconfirm --onedir --windowed --noupx --name LDK2ray --icon "ui/app.ico" --collect-all webview --collect-all pystray --add-data "ui;ui" main.py
-if not exist "dist\LDK2ray\LDK2ray.exe" ( echo [!] Build failed. & pause & exit /b 1 )
+if not exist "dist\LDK2ray\LDK2ray.exe" ( echo [!] Build failed. Restoring... & git checkout -- api.py installer/LDK2ray.iss & pause & exit /b 1 )
 
 REM 2/5) Copy updated index.html and font
 echo [2/5] Copying updated index.html and font...
@@ -70,5 +80,7 @@ if exist "installer\Output\LDK2ray-Setup.exe" (
 ) else (
     echo [!] Compilation failed - check messages above.
 )
+echo Restoring api.py and LDK2ray.iss...
+git checkout -- api.py installer/LDK2ray.iss
 echo(
 pause

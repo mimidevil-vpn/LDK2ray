@@ -16,14 +16,25 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Installing dependencies with Python 3.12...
+echo [1/4] Installing dependencies with Python 3.12...
 py -3.12 -m pip install --upgrade pip
 py -3.12 -m pip install -r requirements.txt pyinstaller
 
 echo.
-echo [2/2] Building app (onedir - легче по памяти и быстрее старт)...
+echo.
+echo [2/4] Injecting real version from git tag...
+for /f "usebackq delims=" %%V in (`git describe --tags --always`) do set "RAW_VER=%%V"
+powershell -NoProfile -Command "$v='%RAW_VER%'.TrimStart('v'); $c=Get-Content api.py; $c=$c -replace 'BUILD_VERSION = \".*?\"', ('BUILD_VERSION = \"'+$v+'\"'); Set-Content api.py $c"
+echo   Version: %RAW_VER%
+
+echo.
+echo [3/4] Building app (onedir - легче по памяти и быстрее старт)...
 REM --noupx: сжатие UPX ломает библиотеки WebView2 и вызывает подозрения антивирусов
 py -3.12 -m PyInstaller --noconfirm --onedir --windowed --noupx --name LDK2ray --icon "ui/app.ico" --collect-all webview --collect-all pystray --add-data "ui;ui" main.py
+
+echo.
+echo [4/4] Restoring api.py...
+git checkout -- api.py
 
 REM -- Add authentication resources needed for subscription system
 py -3.12 -c "import os, shutil; dst = 'dist\\LDK2ray'; shutil.copy2('ui\\index.html', dst + '\\index.html')" 2>nul
