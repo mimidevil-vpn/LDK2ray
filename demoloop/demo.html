@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LEDOKOL HUB - Subscription Required</title>
+    <style>
+        /* ==================== BASE STYLES ==================== */
+        :root {
+            --bg: #050505; --bg-2: #0d0d0e;
+            --text: #ffffff; --muted: #8a8a8e;
+            --surface: rgba(255,255,255,.06); --surface-2: rgba(255,255,255,.11);
+            --border: rgba(255,255,255,.12); --border-strong: rgba(255,255,255,.22);
+            --field: rgba(255,255,255,.05); --btn-bg: #ffffff; --btn-fg: #050505;
+            --specular: rgba(255,255,255,.30); --sheen: rgba(255,255,255,.14);
+            --halo: rgba(255,255,255,.10); --shadow: 0 24px 60px rgba(0,0,0,.5);
+            --shadow-sm: 0 12px 32px rgba(0,0,0,.4);
+            --radius: 26px; --radius-sm: 18px; --pill: 999px;
+            color-scheme: dark;
+        }
+        
+        body {
+            margin: 0; font-family: "SF Pro Display", "SF Pro Text", "SDSans", "Segoe UI Variable Display",
+                "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+            font-feature-settings: "ss01" 1, "cv01" 1;
+            color: var(--text); background: var(--bg); overflow: hidden;
+            -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+        }
+        
+        .glass {
+            position: relative; background: var(--surface);
+            backdrop-filter: blur(16px) saturate(130%); -webkit-backdrop-filter: blur(16px) saturate(130%);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow), inset 0 1px 0 var(--specular);
+        }
+        
+        /* ==================== INTRO SCREEN (SUBSCRIPTION ENTRY) ==================== */
+        #intro {
+            position: fixed; inset: 0; z-index: 200; overflow: hidden; background: var(--bg);
+            transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+        }
+        
+        #intro.gone {
+            opacity: 0; transform: scale(1.05); pointer-events: none;
+        }
+        
+        .intro-screen {
+            position: absolute; inset: 0; display: grid; place-items: center;
+            padding: 26px; text-align: center; opacity: 0; visibility: hidden;
+            transform: translateY(20px) scale(.99); filter: blur(8px);
+            transition: opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1),
+                filter .75s cubic-bezier(.16,1,.3,1), visibility .75s;
+        }
+        
+        .intro-screen.active {
+            opacity: 1; visibility: visible; transform: none; filter: blur(0);
+        }
+        
+        .intro-inner {
+            position: relative; z-index: 2; display: flex; flex-direction: column;
+            align-items: center; max-width: 460px; width: 100%;
+        }
+        
+        .ios-tile {
+            position: relative; display: grid; place-items: center; overflow: hidden; color: var(--text);
+            background: linear-gradient(155deg, var(--surface-2), var(--surface));
+            border: 1px solid var(--border-strong); box-shadow: var(--shadow),
+                inset 0 1.5px 0 var(--specular), inset 0 -14px 30px rgba(0,0,0,.18);
+        }
+        
+        .intro-icon {
+            width: 116px; height: 116px; border-radius: 28px; margin-bottom: 26px;
+            box-shadow: var(--shadow); animation: iconPop 1.1s cubic-bezier(.16,1,.3,1) both;
+        }
+        
+        .intro-icon .streak {
+            animation: sweep 5.5s cubic-bezier(.16,1,.3,1) 1.3s infinite;
+        }
+        
+        @keyframes iconPop {
+            0% { opacity: 0; transform: scale(.6); }
+            62% { transform: scale(1.06); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes sweep {
+            0% { left: -40%; }
+            55%, 100% { left: 135%; }
+        }
+        
+        .intro-title {
+            font-size: 44px; font-weight: 750; letter-spacing: -.03em; margin: 10px 0 0;
+        }
+        
+        .intro-sub {
+            font-size: 16px; color: var(--muted); line-height: 1.55; margin: 14px 0 0; max-width: 380px;
+        }
+        
+        .tg-intro-form {
+            display: flex; gap: 10px; align-items: center; margin-top: 30px; width: 100%; max-width: 400px;
+            opacity: 0; animation: introRise .9s cubic-bezier(.16,1,.3,1) .7s forwards;
+        }
+        
+        .field {
+            flex: 1; background: var(--field); border: 1px solid var(--border); border-radius: var(--pill);
+            color: var(--text); font-size: 15px; padding: 16px 14px; outline: none;
+            font-family: inherit; width: 100%; transition: .2s cubic-bezier(.16,1,.3,1);
+        }
+        
+        .field:focus {
+            border-color: var(--text); box-shadow: 0 0 0 3px var(--halo);
+        }
+        
+        .field::placeholder {
+            color: var(--muted);
+        }
+        
+        .intro-btn {
+            position: relative; overflow: hidden; margin-top: 36px; border: 0; cursor: pointer;
+            color: var(--btn-fg); font-size: 16px; font-weight: 700; padding: 0 30px;
+            height: 58px; min-width: 250px; border-radius: var(--pill);
+            background: var(--btn-bg); display: inline-flex; align-items: center;
+            justify-content: center; gap: 11px; font-family: inherit;
+            box-shadow: 0 16px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35);
+            transition: .3s cubic-bezier(.16,1,.3,1);
+        }
+        
+        .intro-btn:hover {
+            transform: translateY(-2px); box-shadow: 0 22px 52px rgba(0,0,0,.34);
+        }
+        
+        @keyframes introRise {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .intro-note {
+            margin-top: 16px; font-size: 12.5px; color: var(--muted);
+            opacity: 0; animation: introRise .9s cubic-bezier(.16,1,.3,1) .9s forwards;
+        }
+        
+        .intro-note.error {
+            color: #ff5555;
+        }
+        
+        /* ==================== MAIN APP ==================== */
+        .app {
+            position: relative; z-index: 1; height: 100vh; padding: 16px 22px 20px;
+            display: flex; flex-direction: column; gap: 12px; max-width: 1120px; margin: 0 auto;
+            opacity: 0; transform: translateY(8px);
+            transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+        }
+        
+        .app.go {
+            opacity: 1; transform: none;
+        }
+        
+        /* ==================== AUTH BUTTON STYLES ==================== */
+        .auth-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            color: white !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .auth-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4) !important;
+        }
+        
+        .auth-btn:disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================ SUBSCRIPTION ENTRY SCREEN ============================ -->
+    <div id="intro">
+        <div class="intro-screen active" id="introSub">
+            <div class="intro-inner">
+                <div class="ios-tile intro-icon intro-icon-float">
+                    <span class="glow" style="position: absolute; inset: 0;
+                        background: radial-gradient(circle, var(--sheen), transparent 60%);
+                        z-index: 1;"></span>
+                    <span class="streak" style="position: absolute; top: -60%; left: -30%;
+                        width: 55%; height: 220%; background: linear-gradient(90deg, transparent,
+                        var(--specular), transparent); transform: rotate(18deg); opacity: .5;
+                        z-index: 2;"></span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                        style="width: 80%; height: 80%; position: relative; z-index: 3;">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" stroke="currentColor"/>
+                        <path d="M8.5 8.5h3.5v3.5M15.5 8.5h-4v4M15.5 15.5v-4h-4" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <h1 class="intro-title">LEDOKOL HUB</h1>
+                <p class="intro-sub">
+                    Введите ссылку на подписку из Telegram-бота. Приложение не запустится без действующей подписки.
+                </p>
+                
+                <div class="tg-intro-form">
+                    <input type="text" class="field" id="subInput" 
+                           placeholder="https://sub.ledokol.shop/#####" 
+                           spellcheck="false"
+                           onkeydown="if(event.key==='Enter') validateAndContinue();">
+                    <button class="intro-btn auth-btn" id="subBtn" onclick="validateAndContinue()" 
+                            style="min-width: 150px; height: 54px;">
+                        <span class="lbl">Вставить</span>
+                        <span class="spin" style="display: none; width: 18px; height: 18px;
+                            border: 2px solid currentColor; border-right-color: transparent;
+                            border-radius: 50%; display: inline-block; animation: spin .7s linear infinite;"></span>
+                    </button>
+                </div>
+                
+                <div class="intro-note error" id="subNote" style="display: none;">
+                    Неверный формат. Должно быть https://sub.ledokol.shop/#####
+                </div>
+                
+                <div class="intro-note" id="subNoteSuccess" style="display: none; color: #4ade80;">
+                    ✓ Подписка успешно добавлена
+                </div>
+            </div>
+        </div>
+        
+        <!-- Основной интерфейс приложения (скрыт до входа в систему) -->
+        <div class="app" id="appRoot" style="display: none;">
+            <div style="text-align: center; padding: 100px; color: var(--text);">
+                <h1>Приложение загружается...</h1>
+                <p>Пожалуйста, подождите</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ============================ APP SCRIPT ============================ -->
+    <script>
+        // Глобальные переменные
+        let STATE = {
+            isAuthenticated: false,
+            subscription: null,
+            introDone: false
+        };
+        
+        // Проверка валидности подписки
+        function validateSubscription(url) {
+            const pattern = /^https:\/\/sub\.ledokol\.shop\/[a-zA-Z0-9]+$/;
+            return pattern.test(url);
+        }
+        
+        // Валидирует и продолжает
+        function validateAndContinue() {
+            const subInput = document.getElementById('subInput');
+            const subNote = document.getElementById('subNote');
+            const subBtn = document.getElementById('subBtn');
+            const subNoteSuccess = document.getElementById('subNoteSuccess');
+            
+            const url = subInput.value.trim();
+            
+            if (!url) {
+                showError('Введите ссылку на подписку');
+                return;
+            }
+            
+            if (!validateSubscription(url)) {
+                showError('Неверный формат. Должно быть https://sub.ledokol.shop/#####');
+                return;
+            }
+            
+            // Показываем индикатор загрузки
+            showLoading(true);
+            
+            // Имитация запроса к серверу для добавления подписки
+            setTimeout(() => {
+                // Имитируем успешное добавление подписки
+                STATE.subscription = {
+                    url: url,
+                    status: 'active',
+                    userId: 'user_' + Math.random().toString(36).substr(2, 9),
+                    addedAt: new Date().toISOString()
+                };
+                
+                STATE.isAuthenticated = true;
+                
+                // Сохраняем состояние
+                localStorage.setItem('ledokol_auth', JSON.stringify(STATE));
+                
+                // Показываем сообщение об успехе
+                showError('', false); // Сброс ошибки
+                subNoteSuccess.textContent = '✓ Подписка успешно добавлена';
+                subNoteSuccess.style.display = 'block';
+                
+                showLoading(false);
+                
+                // Через 1.5 секунды переходим к основному приложению
+                setTimeout(() => {
+                    // Скрываем экран подписки
+                    document.getElementById('intro').classList.add('gone');
+                    document.getElementById('introSub').classList.remove('active');
+                    
+                    // Показываем основное приложение
+                    setTimeout(() => {
+                        document.getElementById('appRoot').style.display = 'flex';
+                        // Даем небольшую задержку перед применением эффекта "go"
+                        setTimeout(() => {
+                            document.getElementById('appRoot').classList.add('go');
+                        }, 100);
+                        
+                        // Показываем приветственное уведомление
+                        showWelcomeNotification();
+                    }, 400);
+                }, 1500);
+            }, 1000);
+        }
+        
+        // Показать/скрыть индикатор загрузки
+        function showLoading(show) {
+            const btn = document.getElementById('subBtn');
+            const spin = btn.querySelector('.spin');
+            
+            if (show) {
+                btn.disabled = true;
+                btn.classList.add('loading');
+                spin.style.display = 'inline-block';
+                subNoteSuccess.style.display = 'none';
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                spin.style.display = 'none';
+            }
+        }
+        
+        // Показать сообщение об ошибке или успехе
+        function showError(message, isError = true) {
+            const subNote = document.getElementById('subNote');
+            
+            if (message) {
+                subNote.textContent = message;
+                subNote.style.display = 'block';
+                subNote.className = 'intro-note ' + (isError ? 'error' : '');
+            } else {
+                subNote.style.display = 'none';
+            }
+        }
+        
+        // Показать приветственное уведомление
+        function showWelcomeNotification() {
+            const msg = document.createElement('div');
+            msg.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #4ade80, #22c55e);
+                color: white;
+                padding: 16px 32px;
+                border-radius: 50px;
+                font-weight: 600;
+                box-shadow: 0 10px 25px rgba(34, 197, 94, 0.3);
+                z-index: 1000;
+                animation: slideDown 0.3s ease;
+            `;
+            msg.textContent = '✓ Подписка добавлена, приветствуем в приложении!';
+            document.body.appendChild(msg);
+            
+            setTimeout(() => {
+                msg.style.animation = 'slideUp 0.3s ease reverse';
+                setTimeout(() => {
+                    document.body.removeChild(msg);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Проверка сохраненного состояния при загрузке
+        function checkSavedAuth() {
+            const saved = localStorage.getItem('ledokol_auth');
+            if (saved) {
+                try {
+                    STATE = JSON.parse(saved);
+                    if (STATE.isAuthenticated && STATE.subscription) {
+                        // Сразу показываем основное приложение, не показывая экран подписки
+                        document.getElementById('intro').classList.add('gone');
+                        document.getElementById('introSub').classList.remove('active');
+                        document.getElementById('appRoot').style.display = 'flex';
+                        setTimeout(() => {
+                            document.getElementById('appRoot').classList.add('go');
+                        }, 100);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse saved auth:', e);
+                    localStorage.removeItem('ledokol_auth');
+                }
+            }
+        }
+        
+        // Добавляем анимации в head
+        function addAnimations() {
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                
+                @keyframes slideUp {
+                    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                }
+                
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Инициализация
+        function init() {
+            addAnimations();
+            checkSavedAuth();
+        }
+        
+        // Запускаем при готовности DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+        // Для обратной совместимости: делаем функцию доступной глобально
+        window.validateAndContinue = validateAndContinue;
+    </script>
+</body>
+</html>
