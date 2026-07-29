@@ -20,14 +20,16 @@ py -3.12 -m pip install -r requirements.txt pyinstaller
 py -3.12 -m PyInstaller --noconfirm --onedir --windowed --noupx --name LDK2ray --icon "ui/app.ico" --collect-all webview --collect-all pystray --add-data "ui;ui" main.py
 if not exist "dist\LDK2ray\LDK2ray.exe" ( echo [!] Build failed. & pause & exit /b 1 )
 
-REM 2/5) Copy updated index.html (with subscription auth)
-echo [2/5] Copying updated index.html...
+REM 2/5) Copy updated index.html and font
+echo [2/5] Copying updated index.html and font...
 if exist "dist\LDK2ray\index.html" (
     echo   index.html exists (PyInstaller may have copied it)
 ) else (
     echo   index.html not found, attempting to copy from ui\\index.html
     copy /y "ui\index.html" "dist\LDK2ray\" >nul
 )
+copy /y "ui\font.ttf" "dist\LDK2ray\" >nul
+copy /y "ui\font.ttf" "dist\LDK2ray\ui\" >nul
 
 REM 3/5) Copy core runtime files
 REM xray.exe + tun2socks.exe + wintun.dll needed for "Tunnel" mode
