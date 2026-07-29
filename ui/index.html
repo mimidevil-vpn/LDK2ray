@@ -67,6 +67,11 @@ body{
   transition:background .45s var(--ease),color .35s var(--ease);
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
+body.theme-light .app, body.theme-light .topbar, body.theme-light nav, body.theme-light .mode-chip, body.theme-light .server-card, body.theme-light .card, body.theme-light .banner, body.theme-light .toast {
+  --border: rgba(0,0,0,.06);
+  --surface-2: rgba(255,255,255,.5);
+  --surface: rgba(255,255,255,.35);
+}
 /* статичные монохромные ореолы (без анимации — экономим GPU) */
 body::before{
   content:''; position:fixed; inset:-30% -15% auto -15%; height:80vh; z-index:0;
