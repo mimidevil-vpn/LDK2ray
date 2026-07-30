@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define MyAppName      "LEDOKOL HUB"
-#define MyAppVersion   "2.1.3"
+#define MyAppVersion   "3.0.0"
 #define MyAppPublisher "mimidevil"
 #define MyAppURL       "https://t.me/mimidevil"
 #define MyAppExeName   "LDK2ray.exe"

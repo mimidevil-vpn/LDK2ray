@@ -29,7 +29,7 @@ EMOJI_PERIOD = 3600           # секунд между сменами
 class Api:
     # Версия приложения — build скрипты подставляют реальную из git describe
     # Для dev-режима (из исходников) — git describe в runtime
-    BUILD_VERSION = "2.1.3"
+    BUILD_VERSION = "3.0.0"
     BUILD_DATE = "2026-07-28"
 
     def __init__(self):

@@ -577,9 +577,9 @@ body.has-bg.theme-light .log-box, body.has-bg.theme-light .toast{background:rgba
 .tutorial-progress span.done{background:var(--text);}
 
 /* ==================== НОВОСТИ ==================== */
-.tab .news-pulse{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--text);
-  margin-left:5px; animation:newsPulse 1.5s ease-in-out infinite;}
-@keyframes newsPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.tab .news-pulse{display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71;
+  margin-left:5px; animation:newsPulseGreen 1.2s ease-in-out infinite; box-shadow:0 0 6px #2ecc71;}
+@keyframes newsPulseGreen{0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px #2ecc71;}50%{opacity:.5;transform:scale(.6);box-shadow:0 0 12px #2ecc71;}}
 .news-header{display:flex; align-items:center; justify-content:space-between; padding:0 0 14px; border-bottom:1px solid var(--border); margin-bottom:16px;}
 .news-header-left{display:flex; align-items:center; gap:10px;}
 .news-header-left svg{width:20px; height:20px; fill:var(--text);}
@@ -674,7 +674,8 @@ nav .nav-foot .dot.on{background:#34c759}
   <span class="orb orb1"></span><span class="orb orb2"></span><span class="orb orb3"></span>
 
   <!-- ШАГ 1: ПРИВЕТСТВИЕ И ПОДПИСКА -->
-  <div class="intro-screen" id="introSub">
+  <!-- active по умолчанию — если initEnhanced не запустится, поле всё равно видно -->
+  <div class="intro-screen active" id="introSub">
     <div class="intro-inner">
       <div class="ios-tile intro-icon intro-icon-float">
         <span class="glow"></span><span class="streak"></span>
@@ -1082,7 +1083,6 @@ nav .nav-foot .dot.on{background:#34c759}
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script>
 /* ============================ I18N ============================ */
 const I18N = {
@@ -1374,6 +1374,11 @@ const PHRASES = [
 ];
 const $ = (id)=>document.getElementById(id);
 const api = ()=> (window.pywebview && window.pywebview.api) || null;
+const sanitize = (s)=>String(s).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
+const qs = (s,p)=> (p||document).querySelector(s);
+const qsa = (s,p)=> Array.from((p||document).querySelectorAll(s));
+function navTabs(){ return qsa(".tab, .nav-item"); }
+function panels(){ return qsa(".panel"); }
 
 /* ---------- форматирование ---------- */
 function fmtBytes(n){
@@ -1995,22 +2000,19 @@ $("saveBtn").addEventListener("click", async ()=>{
   toast(STATE.saved===false ? t("save_failed") : t("saved"), STATE.saved===false);
 });
 $("openDataBtn").addEventListener("click", ()=>{ if(api()) api().open_data_folder(); });
-
 /* ---------- табы ---------- */
 async function switchTab(name){
-  document.querySelectorAll(".tab, .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));
+  navTabs().forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  panels().forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));
   if(name==="profile") renderProfile();
   if(name==="routes") renderRoutes();
   if(name==="settings"){
-    // перечитываем: ядро и tun2socks могли положить рядом уже после запуска
     try{ if(api()){ STATE = await api().get_state(); fillSettings(); renderModes(); } }catch(e){}
     updateXrayStatus();
   }
   if(name==="news"){
     checkNews();
-    // убираем пульс
-    const tab=document.querySelector('.tab[data-tab="news"], .nav-item[data-tab="news"]');
+    const tab=qs('.tab[data-tab="news"], .nav-item[data-tab="news"]');
     if(tab){const p=tab.querySelector(".news-pulse");if(p)p.remove();}
   }
 }
@@ -2061,8 +2063,8 @@ const TUTORIAL_STEPS=[
 let _tutStep=0, _tutPrevTab="servers";
 function startTutorial(){
   _tutStep=0; _tutPrevTab="servers";
-  document.querySelectorAll(".tab, .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
+  navTabs().forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+  panels().forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
   $("tutorialOverlay").classList.add("active");
   renderTutorialStep();
 }
@@ -2070,8 +2072,8 @@ function renderTutorialStep(){
   const steps=TUTORIAL_STEPS, el=$("tutorialOverlay");
   if(_tutStep>=steps.length){
     el.classList.remove("active");
-    document.querySelectorAll(".tab, .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
+    navTabs().forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+    panels().forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
     if(api()) api().finish_tutorial().then(r=>{ STATE.tutorial_done=true; });
     return;
   }
@@ -2082,8 +2084,8 @@ function renderTutorialStep(){
   $("tutorialDesc").textContent=t(s.desc);
   $("tutorialNextBtn").textContent=_tutStep<steps.length-1?t("tutorial_next"):"✓";
   if(s.tab){
-    document.querySelectorAll(".tab, .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.tab===s.tab));
-    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+s.tab));
+    navTabs().forEach(b=>b.classList.toggle("active",b.dataset.tab===s.tab));
+    panels().forEach(p=>p.classList.toggle("active",p.id==="panel-"+s.tab));
   }
   requestAnimationFrame(()=>{
     const tgt=document.querySelector(s.target);
@@ -2104,8 +2106,8 @@ function renderTutorialStep(){
 $("tutorialNextBtn").addEventListener("click",()=>{ _tutStep++; renderTutorialStep(); });
 $("tutorialSkipBtn").addEventListener("click",async()=>{
   $("tutorialOverlay").classList.remove("active");
-  document.querySelectorAll(".tab, .nav-item").forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
+  navTabs().forEach(b=>b.classList.toggle("active",b.dataset.tab==="servers"));
+  panels().forEach(p=>p.classList.toggle("active",p.id==="panel-servers"));
   if(api()) try{ await api().finish_tutorial(); STATE.tutorial_done=true; }catch(e){}
 });
 $("repeatTutorialBtn").addEventListener("click", async ()=>{
@@ -2152,9 +2154,11 @@ async function checkNews(){
 function renderNews(feedId, html, date){
   let dateStr="";
   if(date){
-    try{const d=new Date(date);dateStr=d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){dateStr=date;}
+    try{const d=new Date(date);dateStr=d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){dateStr='';}
   }
-  $(feedId).innerHTML=`<div class="news-post"><div class="news-post-body">${html}</div>${dateStr?`<div class="news-date">${dateStr}</div>`:''}</div>`;
+  const el=$(feedId);
+  if(!el) return;
+  el.innerHTML=`<div class="news-post"><div class="news-post-body">${html}</div>${dateStr?`<div class="news-date">${sanitize(dateStr)}</div>`:''}</div>`;
 }
 $("newsOffToggle").addEventListener("change", async ()=>{
   _newsDisabled=$("newsOffToggle").checked;
@@ -2313,69 +2317,72 @@ async function loadBuildInfo(){
 let _initCalled=false;
 async function initEnhanced(){
   if(_initCalled) return; _initCalled=true;
-  if(api()) STATE = await api().get_state();
-  const s = STATE.settings || {};
-  THEME = s.theme || "auto"; applyTheme();
-  applyLang(s.lang || "ru");
-  fillSettings(); renderServers(); updateConnectUI(); updateXrayStatus();
-  renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
-  CONFLICTS = STATE.conflicts || []; renderConflicts();
+  try {
+    if(api()) STATE = await api().get_state();
+    const s = STATE.settings || {};
+    THEME = s.theme || "auto"; applyTheme();
+    applyLang(s.lang || "ru");
+    fillSettings(); renderServers(); updateConnectUI(); updateXrayStatus();
+    renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
+    CONFLICTS = STATE.conflicts || []; renderConflicts();
 
-  try{ await loadBg(); }catch(e){}
-  try{ await loadFont(); }catch(e){}
-  try{ await loadBuildInfo(); }catch(e){}
-  initSnow();
-  const snowOn=!!(s.snow_enabled);
-  if($("snowToggle")) $("snowToggle").checked=snowOn;
-  if(snowOn && STATE.connected) toggleSnow(true);
+    try{ await loadBg(); }catch(e){}
+    try{ await loadFont(); }catch(e){}
+    try{ await loadBuildInfo(); }catch(e){}
+    initSnow();
+    const snowOn=!!(s.snow_enabled);
+    if($("snowToggle")) $("snowToggle").checked=snowOn;
+    if(snowOn && STATE.connected) toggleSnow(true);
 
-  const hasSub = STATE.settings && STATE.settings.subscription_url;
+    const hasSub = STATE.settings && STATE.settings.subscription_url;
 
-  // если подписка есть — сразу в приложение
-  if (hasSub) {
-    // автообновляем, если серверы пусты
-    if (STATE.servers.length === 0) {
-      try {
-        const r = await api().refresh_subscription();
-        if (r && r.state) STATE = r.state;
-      } catch(e) {}
+    // если подписка есть — сразу в приложение
+    if (hasSub) {
+      if (STATE.servers.length === 0) {
+        try {
+          const r = await api().refresh_subscription();
+          if (r && r.state) STATE = r.state;
+        } catch(e) {}
+      }
+      const intro=$("intro"); if(intro) intro.remove();
+      document.body.classList.remove("intro-active");
+      showApp();
+      if (!STATE.tutorial_done) setTimeout(() => startTutorial(), 600);
+      try{ checkNews(); }catch(e){}
+      return;
     }
-    const intro=$("intro"); if(intro) intro.remove();
-    document.body.classList.remove("intro-active");
-    showApp();
-    if (!STATE.tutorial_done) setTimeout(() => startTutorial(), 600);
+
+    // нет подписки — показываем welcome
+    document.body.classList.add("intro-active");
+    $("introSub").classList.add("active");
+    $("subInput").focus();
+
+    setInterval(tickEmoji, 60000);
+    setInterval(async ()=>{
+      if(!api() || document.hidden) return;
+      try{
+        const st = await api().get_state();
+        const changed = st.tun_active!==STATE.tun_active || st.connected!==STATE.connected
+                     || st.is_admin!==STATE.is_admin || st.tun_found!==STATE.tun_found;
+        STATE = st;
+        CONFLICTS = STATE.conflicts || [];
+        if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
+      }catch(e){}
+    }, 5000);
+
     try{ checkNews(); }catch(e){}
-    return;
-  }
 
-  // нет подписки — показываем welcome
-  document.body.classList.add("intro-active");
-  $("introSub").classList.add("active");
-  $("subInput").focus();
-
-  setInterval(tickEmoji, 60000);
-  setInterval(async ()=>{
-    if(!api() || document.hidden) return;
-    try{
-      const st = await api().get_state();
-      const changed = st.tun_active!==STATE.tun_active || st.connected!==STATE.connected
-                   || st.is_admin!==STATE.is_admin || st.tun_found!==STATE.tun_found;
-      STATE = st;
-      CONFLICTS = STATE.conflicts || [];
-      if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
-    }catch(e){}
-  }, 5000);
-
-  try{ checkNews(); }catch(e){}
+  } catch(e) {}
 }
+// ВАЖНО: fallback ставим ВСЕГДА, даже если pywebview уже доступен
 if(window.pywebview && window.pywebview.api){ initEnhanced(); }
-else {
-  window.addEventListener("pywebviewready", initEnhanced);
-  setTimeout(initEnhanced, 3000);
-}
+else { window.addEventListener("pywebviewready", initEnhanced); }
+setTimeout(()=>{
+  if(!_initCalled) initEnhanced();
+}, 3000);
 
 /* ============================ СНЕЖИНКИ ============================ */
-let _snowCanvas=null, _snowCtx=null, _snowFlakes=[], _snowAnim=null, _snowOn=false;
+var _snowCanvas=null, _snowCtx=null, _snowFlakes=[], _snowAnim=null, _snowOn=false;
 function initSnow(){
   if(_snowCanvas) return;
   _snowCanvas=document.createElement("canvas");
@@ -2394,11 +2401,12 @@ function toggleSnow(on){
   if(!on){_snowCanvas.style.display="none";if(_snowAnim){cancelAnimationFrame(_snowAnim);_snowAnim=null;}return;}
   _snowCanvas.style.display="block";
   _snowFlakes=[];
-  for(let i=0;i<80;i++){
+  const count=Math.min(120,Math.max(40,Math.floor(window.innerWidth/8)));
+  for(let i=0;i<count;i++){
     _snowFlakes.push({
       x:Math.random()*_snowCanvas.width, y:Math.random()*_snowCanvas.height,
       r:Math.random()*3+1.5, d:Math.random()*80+20, s:Math.random()*.6+.4,
-      o:Math.random()*.5+.3
+      o:Math.random()*.5+.3, vx:(Math.random()-.5)*.3
     });
   }
   if(_snowAnim) cancelAnimationFrame(_snowAnim);
@@ -2406,12 +2414,17 @@ function toggleSnow(on){
     if(!_snowCanvas||!_snowCtx||!_snowOn){_snowAnim=null;return;}
     _snowCtx.clearRect(0,0,_snowCanvas.width,_snowCanvas.height);
     const isDark=!document.body.classList.contains("theme-light");
+    const baseColor=isDark?"255,255,255":"200,200,255";
     for(const f of _snowFlakes){
-      f.y+=f.s; f.x+=Math.sin(f.y/f.d)*.3;
+      f.y+=f.s; f.x+=Math.sin(f.y/f.d)*.3+f.vx;
       if(f.y>_snowCanvas.height){f.y=-f.r;f.x=Math.random()*_snowCanvas.width;}
       _snowCtx.beginPath();
+      _snowCtx.arc(f.x,f.y,f.r*1.8,0,Math.PI*2);
+      _snowCtx.fillStyle="rgba("+baseColor+","+(f.o*.2)+")";
+      _snowCtx.fill();
+      _snowCtx.beginPath();
       _snowCtx.arc(f.x,f.y,f.r,0,Math.PI*2);
-      _snowCtx.fillStyle=isDark?"rgba(255,255,255,"+f.o+")":"rgba(200,200,255,"+f.o+")";
+      _snowCtx.fillStyle="rgba("+baseColor+","+f.o+")";
       _snowCtx.fill();
     }
     _snowAnim=requestAnimationFrame(draw);
