@@ -1492,12 +1492,15 @@ $("subInput").addEventListener("keydown", (e) => {
 
 // паста только заполняет поле, импорт — только по Enter
 
+let _importingSub = false;
 async function tryImportSub() {
+  if (_importingSub) return;
   const v = ($("subInput").value || "").trim();
-  if (!v) return;
+  if (!v || !api()) return;
   if (!/^https:\/\/sub\.ledokol\.shop\/.+/.test(v)) {
     showSubError(t("welcome_err_format")); return;
   }
+  _importingSub = true;
   const btn = $("subNextBtn");
   btn.classList.add("loading");
   hideSubError();
@@ -1507,7 +1510,7 @@ async function tryImportSub() {
       const msg = r.error === "html_response" ? t("welcome_err_invalid")
                  : r.error === "empty_sub" ? t("welcome_err_empty")
                  : r.error === "wrong_domain" ? t("welcome_err_format")
-                 : t("err_"+r.error) || t("err_generic") + r.error;
+                 : I18N[LANG]["err_"+r.error] || t("err_generic") + r.error;
       showSubError(msg);
       btn.classList.remove("loading");
       return;
@@ -1545,6 +1548,8 @@ async function tryImportSub() {
   } catch (e) {
     showSubError(t("err_generic") + e);
     btn.classList.remove("loading");
+  } finally {
+    _importingSub = false;
   }
 }
 
@@ -1678,8 +1683,8 @@ function renderServers(){
     list.appendChild(card);
   });
 }
-async function selectServer(i){ STATE = await api().select_server(i); renderServers(); updateConnectUI(); renderProfile(); }
-async function delServer(i){ STATE = await api().delete_server(i); renderServers(); updateConnectUI(); renderProfile(); }
+async function selectServer(i){ if(!api()) return; STATE = await api().select_server(i); renderServers(); updateConnectUI(); renderProfile(); }
+async function delServer(i){ if(!api()) return; STATE = await api().delete_server(i); renderServers(); updateConnectUI(); renderProfile(); }
 
 /* ============================ ПРОФИЛЬ ============================ */
 function renderStars(n){
@@ -1787,6 +1792,7 @@ $("tgLinkBtn").addEventListener("click", async ()=>{
   finally{ btn.disabled=false; btn.textContent=old; }
 });
 $("tgUnlinkBtn").addEventListener("click", async ()=>{
+  if(!api()) return;
   const r=await api().unlink_telegram();
   STATE=r.state||STATE;
   // аватарку-заглушку возвращаем перезагрузкой разметки плитки
@@ -1845,6 +1851,7 @@ function startUptime(){
 }
 $("connectBtn").addEventListener("click", async ()=>{
   const btn=$("connectBtn");
+  if(!api()) return;
   if(STATE.connected){
     const r=await api().disconnect();
     STATE=r.state||STATE; updateConnectUI(); return;
@@ -1872,6 +1879,7 @@ window.__pushSpeed=(up,down)=>{
 
 /* ---------- пинг ---------- */
 $("pingBtn").addEventListener("click", async ()=>{
+  if(!api()) return;
   document.querySelectorAll(".ping-chip").forEach(c=>{c.textContent="…";c.className="ping-chip";});
   await api().ping_all();
 });
@@ -1897,6 +1905,7 @@ $("clearLogs").addEventListener("click",()=>{ $("logBox").innerHTML=""; });
 
 /* ---------- добавление ---------- */
 $("addBtn").addEventListener("click", async ()=>{
+  if(!api()) return;
   const txt=$("linksBox").value;
   const r=await api().add_links(txt);
   if(!r.added){ toast(t("err_no_links"),true); return; }
@@ -1976,6 +1985,7 @@ function updateXrayStatus(){
   line($("tunStatus"),  STATE.tun_found,  "tun_ok",  "tun_no");
 }
 $("saveBtn").addEventListener("click", async ()=>{
+  if(!api()) return;
   const patch={
     socks_port:parseInt($("setSocks").value)||10808,
     http_port:parseInt($("setHttp").value)||10809,
@@ -2231,11 +2241,11 @@ $("bgRemoveBtn").addEventListener("click", async ()=>{
 });
 
 /* ==================== ТЕМА + ФОН: блокировка ==================== */
-function enforceThemeForBg(){
+async function enforceThemeForBg(){
   if(document.body.classList.contains("has-bg")){
     if(THEME!=="dark"){
       THEME="dark"; applyTheme();
-      if(api()) api().save_settings({theme:THEME});
+      if(api()) await api().save_settings({theme:THEME});
     }
   }
 }
@@ -2401,6 +2411,7 @@ async function initEnhanced(){
       const changed = st.tun_active!==STATE.tun_active || st.connected!==STATE.connected
                    || st.is_admin!==STATE.is_admin || st.tun_found!==STATE.tun_found;
       STATE = st;
+      CONFLICTS = STATE.conflicts || [];
       if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
     }catch(e){}
   }, 5000);

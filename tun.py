@@ -235,7 +235,8 @@ class TunManager:
             # 3) ждём адаптер и настраиваем его
             self.adapter = _wintun_adapter(timeout=10.0, proc=self.proc)
             if not self.adapter:
-                tail = " ".join(self._last_lines[-3:]).strip()
+                with self._lock:
+                    tail = " ".join(self._last_lines[-3:]).strip()
                 self.stop()
                 raise RuntimeError(
                     "Туннель не поднялся. " + (tail[:300] if tail else
@@ -300,8 +301,9 @@ class TunManager:
                 line = (line or "").rstrip()
                 if not line:
                     continue
-                self._last_lines.append(line)
-                del self._last_lines[:-8]
+                with self._lock:
+                    self._last_lines.append(line)
+                    del self._last_lines[:-8]
                 if on_log:
                     on_log("[tun] " + line)
         except Exception:

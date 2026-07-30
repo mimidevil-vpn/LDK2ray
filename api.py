@@ -43,6 +43,7 @@ class Api:
         self._tun = tun.TunManager()
         self.connected = False
         self._conflicts = []
+        self._conflicts_lock = threading.Lock()
         self._save_error = ""
         self._speed = (0, 0)
         self._total = [0, 0]
@@ -168,7 +169,7 @@ class Api:
             "local_id": self.settings.get("local_id", ""),
             "rating": int(self.settings.get("rating", 0) or 0),
             "emoji": self.settings.get("emoji", ""),
-            "conflicts": self._conflicts,
+            "conflicts": list(self._conflicts),
             "sub": self._sub_info(),
             "save_error": self._save_error,
             "data_dir": storage.data_dir(),
@@ -598,9 +599,10 @@ class Api:
                 pass
 
             found = sorted(found)
-            if found != self._conflicts:
-                self._conflicts = found
-                self._push("window.__pushConflicts(%s)" % json.dumps(found))
+            with self._conflicts_lock:
+                if found != self._conflicts:
+                    self._conflicts = found
+                    self._push("window.__pushConflicts(%s)" % json.dumps(found))
             time.sleep(15)
 
     def open_external(self, url):

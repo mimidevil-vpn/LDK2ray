@@ -26,11 +26,13 @@ def set_proxy(host_port: str):
         import winreg
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _INTERNET_SETTINGS,
                              0, winreg.KEY_WRITE)
-        winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1)
-        winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, host_port)
-        winreg.SetValueEx(key, "ProxyOverride", 0, winreg.REG_SZ,
-                          "localhost;127.*;10.*;172.16.*;192.168.*;<local>")
-        winreg.CloseKey(key)
+        try:
+            winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1)
+            winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, host_port)
+            winreg.SetValueEx(key, "ProxyOverride", 0, winreg.REG_SZ,
+                              "localhost;127.*;10.*;172.16.*;192.168.*;<local>")
+        finally:
+            winreg.CloseKey(key)
         _refresh()
         return True, ""
     except Exception as e:
@@ -44,8 +46,10 @@ def disable_proxy():
         import winreg
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _INTERNET_SETTINGS,
                              0, winreg.KEY_WRITE)
-        winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 0)
-        winreg.CloseKey(key)
+        try:
+            winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 0)
+        finally:
+            winreg.CloseKey(key)
         _refresh()
         return True, ""
     except Exception as e:

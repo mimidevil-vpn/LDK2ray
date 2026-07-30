@@ -295,6 +295,7 @@ class XrayManager:
         self.exe = ""
         self._log_thread = None
         self._last_lines = []      # хвост вывода ядра — для текста ошибки
+        self._ll_lock = threading.Lock()
         self.api_port = API_PORT
 
     def is_running(self) -> bool:
@@ -350,9 +351,13 @@ class XrayManager:
         # Ядро падает мгновенно, если порт уже занят (например, остался висеть
         # прошлый экземпляр). Без этой проверки приложение бодро рапортовало
         # «Подключено», а трафик никуда не шёл.
-        time.sleep(1.0)
+        for _ in range(20):
+            if self.proc.poll() is not None:
+                break
+            time.sleep(0.05)
         if self.proc.poll() is not None:
-            tail = " ".join(self._last_lines[-4:]).strip()
+            with self._ll_lock:
+                tail = " ".join(self._last_lines[-4:]).strip()
             self.proc = None
             raise RuntimeError(
                 "Ядро не запустилось. " + (tail[:300] if tail else
@@ -401,8 +406,9 @@ class XrayManager:
                 line = (line or "").rstrip()
                 if not line:
                     continue
-                self._last_lines.append(line)
-                del self._last_lines[:-10]
+                with self._ll_lock:
+                    self._last_lines.append(line)
+                    del self._last_lines[:-10]
                 if on_log:
                     on_log(line)
         except Exception:

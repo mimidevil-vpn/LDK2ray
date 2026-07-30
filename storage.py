@@ -97,7 +97,8 @@ def log(msg: str) -> None:
                 f.seek(LOG_MAX_BYTES // 2)
                 f.readline()
                 tail = f.read()
-            _atomic_write(path, tail)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(tail)
     except Exception:
         pass
     try:
