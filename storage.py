@@ -321,7 +321,7 @@ def save_background(data_b64: str) -> bool:
 
 
 def load_background() -> str:
-    """Читает сохранённый фон и возвращает base64-строку (data:image/png;base64,...)."""
+    """Читает сохранённый фон и возвращает голый base64 (без data: URI)."""
     import base64
     path = os.path.join(data_dir(), "background.png")
     try:
@@ -329,7 +329,7 @@ def load_background() -> str:
             raw = f.read()
         if len(raw) > 5 * 1024 * 1024:
             return ""
-        return "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+        return base64.b64encode(raw).decode("ascii")
     except FileNotFoundError:
         return ""
     except Exception:
@@ -367,7 +367,7 @@ def save_font(data_b64: str) -> bool:
 
 
 def load_font() -> str:
-    """Читает сохранённый шрифт и возвращает base64-строку (data:font/ttf;base64,...)."""
+    """Читает сохранённый шрифт и возвращает голый base64 (без data: URI)."""
     import base64
     path = os.path.join(data_dir(), "custom_font.ttf")
     try:
@@ -375,7 +375,7 @@ def load_font() -> str:
             raw = f.read()
         if len(raw) > 20 * 1024 * 1024:
             return ""
-        return "data:font/truetype;base64," + base64.b64encode(raw).decode("ascii")
+        return base64.b64encode(raw).decode("ascii")
     except FileNotFoundError:
         return ""
     except Exception:
