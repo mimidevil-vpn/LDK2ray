@@ -153,6 +153,7 @@ DEFAULT_SETTINGS = {
     "has_custom_font": False,   # загружен ли .ttf шрифт
     "last_news_id": "",         # ID последнего показанного поста
     "news_off": False,          # отключить уведомления о новых постах
+    "snow_enabled": True,       # снежинки на подключённом сервере
 }
 
 

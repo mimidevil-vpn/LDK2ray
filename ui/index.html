@@ -660,11 +660,11 @@ nav .nav-foot .dot.on{background:#34c759}
 
 .panel h2.panel-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-.02em}
 .mode-row{display:flex;gap:10px;margin-bottom:18px}
-.mode-chip{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--pill);font-size:13px;font-weight:500;color:var(--muted);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:.2s var(--ease)}
-.mode-chip:hover{border-color:var(--border-strong);color:var(--text)}
-.mode-chip.on{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg)}
+.mode-chip{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:var(--radius);font-size:14px;font-weight:600;color:var(--muted);border:1px solid var(--border);background:var(--surface-2);cursor:pointer;transition:.2s var(--ease);box-shadow:inset 0 1px 0 var(--specular);font-family:inherit;letter-spacing:-.01em}
+.mode-chip:hover{border-color:var(--border-strong);color:var(--text);transform:translateY(-1px)}
+.mode-chip.on{background:var(--btn-bg);color:var(--btn-fg);border-color:var(--btn-bg);box-shadow:none}
 .mode-chip.locked{opacity:.4;pointer-events:none}
-.mode-chip svg{width:14px;height:14px}
+.mode-chip svg{width:18px;height:18px;flex:none}
 </style>
 </head>
 <body class="intro-active">
@@ -1037,6 +1037,14 @@ nav .nav-foot .dot.on{background:#34c759}
         </div>
       </div>
   <div class="card">
+    <h3 data-i18n="settings_snow"></h3>
+    <p class="hint" data-i18n="settings_snow_hint"></p>
+    <div class="set-row">
+      <span class="lbl" data-i18n="snow_toggle"></span>
+      <label class="switch"><input type="checkbox" id="snowToggle"><span class="track"></span></label>
+    </div>
+  </div>
+  <div class="card">
     <h3 data-i18n="settings_tutorial"></h3>
     <p class="hint" data-i18n="settings_tutorial_hint"></p>
     <button class="btn ghost" id="repeatTutorialBtn" data-i18n="settings_tutorial_repeat"></button>
@@ -1182,6 +1190,8 @@ hub_badge:"Приложение для пользователей Ledokol VPN",
     bg_drop_hint:"Перетащите изображение сюда",
     settings_font:"Шрифт", settings_font_hint:"Загрузите .ttf файл шрифта (макс. 20 МБ)",
     settings_font_upload:"Загрузить шрифт", settings_font_remove:"Удалить шрифт", settings_font_placeholder:"Системный шрифт",
+    settings_snow:"Снежинки", settings_snow_hint:"Падающие снежинки на подключённом сервере",
+    snow_toggle:"Показывать снежинки",
     settings_tutorial:"Туториал", settings_tutorial_hint:"Пошаговое руководство по интерфейсу",
     settings_tutorial_repeat:"Повторить",
     settings_build:"Сборка",
@@ -1293,6 +1303,8 @@ hub_badge:"App for Ledokol VPN users",
     bg_drop_hint:"Drop image here",
     settings_font:"Font", settings_font_hint:"Upload a .ttf font file (max 20 MB)",
     settings_font_upload:"Upload font", settings_font_remove:"Remove font", settings_font_placeholder:"System font",
+    settings_snow:"Snowflakes", settings_snow_hint:"Falling snowflakes on connected server",
+    snow_toggle:"Show snowflakes",
     settings_tutorial:"Tutorial", settings_tutorial_hint:"Step-by-step guide to the interface",
     settings_tutorial_repeat:"Repeat",
     settings_build:"Build",
@@ -1340,6 +1352,26 @@ let STATE = {servers:[], selected:-1, connected:false, settings:{}, local_id:"",
              xray_found:null, tun_found:null, is_admin:null};
 let CONFLICTS = [];
 let uptimeTimer = null, uptimeStart = 0;
+const PHRASES = [
+  "Привет","Я тебя вижу","Ты в безопасности","Всё под контролем",
+  "Отдыхай","Я на связи","Не дрейфь","Всё будет хорошо",
+  "Доверься мне","Я рядом","Включай, не бойся","Защита активна",
+  "Спокойно","Без паники","В эфире","Всё чисто",
+  "Ты под защитой","Штатный режим","Готов к работе","Ожидаю команды",
+  "На месте","Слушаю","Внимание","Я здесь",
+  "Всё готово","На связи","Жду сигнала","Режим ожидания",
+  "Полная готовность","Контроль","Мониторинг","Стабильность",
+  "Защита","Анонимность","Свобода","Доступ есть",
+  "Граница открыта","Всё тип-топ","Порядок","Тишина",
+  "Спокойствие","Уютно","Без границ","В сети",
+  "Онлайн","Активен","На посту","В дозоре",
+  "Глаза открыты","Сканер работает","Сигнал есть","Канал стабилен",
+  "Жду действий","Твоя очередь","Как скажешь","Командуй",
+  "Всё схвачено","Без проблем","Окей","Готовность 100 %",
+  "Оптика в норме","Канал чист","Доступ разрешён","Всё открыто",
+  "Интернет свободен","Дыши свободно","Без цензуры","Полный порядок",
+  "Связь есть","Система готова","Охраняю","В зоне комфорта"
+];
 const $ = (id)=>document.getElementById(id);
 const api = ()=> (window.pywebview && window.pywebview.api) || null;
 
@@ -1367,37 +1399,7 @@ function fmtWhen(ts){
   }catch(e){ return "—"; }
 }
 
-async function init(){
-  STATE = await api().get_state();
-  const s = STATE.settings || {};
-  THEME = s.theme || "auto"; applyTheme();
-  applyLang(s.lang || "ru");
-  fillSettings(); renderServers(); updateConnectUI(); updateXrayStatus();
-  renderProfile(); renderModes(); renderRoutes(); renderEmoji(); renderSaveError();
-  CONFLICTS = STATE.conflicts || []; renderConflicts();
 
-  // Знакомство показываем один раз: либо оно уже пройдено, либо серверы уже есть.
-  if(STATE.intro_done || (STATE.servers && STATE.servers.length)){
-    const intro=$("intro"); if(intro) intro.remove();
-    document.body.classList.remove("intro-active");
-    showApp();
-  }else{
-    document.body.classList.add("intro-active");
-  }
-
-  setInterval(tickEmoji, 60000);
-  // лёгкая сверка с Python: туннель мог отвалиться, сторонний VPN — закрыться
-  setInterval(async ()=>{
-    if(!api() || document.hidden) return;
-    try{
-      const s = await api().get_state();
-      const changed = s.tun_active!==STATE.tun_active || s.connected!==STATE.connected
-                   || s.is_admin!==STATE.is_admin || s.tun_found!==STATE.tun_found;
-      STATE = s;
-      if(changed){ renderModes(); updateConnectUI(); updateXrayStatus(); }
-    }catch(e){}
-  }, 5000);
-}
 
 /* Показать интерфейс. Раньше здесь был requestAnimationFrame — но если окно
    стартует свёрнутым или перекрытым, WebView2 не рисует кадры и колбэк не
@@ -1808,17 +1810,23 @@ $("delAllServersBtn").addEventListener("click", async ()=>{
 /* ============================ ПОДКЛЮЧЕНИЕ ============================ */
 function updateConnectUI(){
   const dot=$("statusDot"), title=$("statusTitle"), sub=$("statusSub"), btn=$("connectBtn");
+  const navDot=$("navStatusDot"), navText=$("navStatusText");
   if(!btn) return;
   const sv = (STATE.selected>=0 && STATE.servers[STATE.selected]) ? STATE.servers[STATE.selected] : null;
   if(STATE.connected){
     dot.className="status-dot on"; title.textContent=t("connected");
     btn.textContent=t("disconnect"); btn.className="connect-btn connected";
+    if(navDot) navDot.style.background="var(--text)";
+    if((STATE.settings||{}).snow_enabled) toggleSnow(true);
   }else{
     dot.className="status-dot"; title.textContent=t("disconnected");
     btn.textContent=t("connect"); btn.className="connect-btn";
     sub.textContent = sv ? (t("selected_pfx")+sv.name) : t("pick_server");
     $("speedBox").classList.remove("live");
     $("spUp").textContent=fmtSpeed(0); $("spDown").textContent=fmtSpeed(0);
+    if(navDot) navDot.style.background="var(--muted)";
+    if(navText) navText.textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+    toggleSnow(false);
   }
 }
 function startUptime(){
@@ -1831,6 +1839,7 @@ function startUptime(){
     const ss=String(s%60).padStart(2,"0");
     const sv=STATE.servers[STATE.selected];
     $("statusSub").textContent=(sv?sv.name:"")+"   ·   "+hh+":"+mm+":"+ss;
+    const nst=$("navStatusText"); if(nst) nst.textContent="· "+hh+":"+mm+":"+ss;
   },1000);
 }
 $("connectBtn").addEventListener("click", async ()=>{
@@ -1956,6 +1965,7 @@ function fillSettings(){
   $("setDns").value=s.tun_dns || "1.1.1.1";
   $("setXray").value=s.xray_path || "";
   $("dataDirText").textContent=(STATE.data_dir||"")+" — "+t("diag_hint");
+  if($("snowToggle")) $("snowToggle").checked=!!s.snow_enabled;
 }
 function updateXrayStatus(){
   // null = состояние ещё не пришло из Python; молчим, а не пугаем «не найдено»
@@ -2279,6 +2289,11 @@ $("fontRemoveBtn").addEventListener("click", async ()=>{
   if($("fontRemoveBtn")) $("fontRemoveBtn").style.display="none";
   if($("fontNameField")) $("fontNameField").value="";
 });
+$("snowToggle").addEventListener("change", async ()=>{
+  const on=$("snowToggle").checked;
+  if(api()) STATE=await api().save_settings({snow_enabled:on});
+  if(STATE.connected){ toggleSnow(on); }
+});
 
 /* ============================ ИНФО О СБОРКЕ ============================ */
 async function loadBuildInfo(){
@@ -2309,6 +2324,10 @@ async function initEnhanced(){
   try{ await loadBg(); }catch(e){}
   try{ await loadFont(); }catch(e){}
   try{ await loadBuildInfo(); }catch(e){}
+  initSnow();
+  const snowOn=!!(s.snow_enabled);
+  if($("snowToggle")) $("snowToggle").checked=snowOn;
+  if(snowOn && STATE.connected) toggleSnow(true);
 
   const hasSub = STATE.settings && STATE.settings.subscription_url;
 
@@ -2350,7 +2369,55 @@ async function initEnhanced(){
   try{ checkNews(); }catch(e){}
 }
 if(window.pywebview && window.pywebview.api){ initEnhanced(); }
-else window.addEventListener("pywebviewready", initEnhanced);
+else {
+  window.addEventListener("pywebviewready", initEnhanced);
+  setTimeout(initEnhanced, 3000);
+}
+
+/* ============================ СНЕЖИНКИ ============================ */
+let _snowCanvas=null, _snowCtx=null, _snowFlakes=[], _snowAnim=null, _snowOn=false;
+function initSnow(){
+  if(_snowCanvas) return;
+  _snowCanvas=document.createElement("canvas");
+  _snowCanvas.id="snowCanvas";
+  _snowCanvas.style.cssText="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none";
+  document.body.appendChild(_snowCanvas);
+  _snowCtx=_snowCanvas.getContext("2d");
+  function resize(){if(_snowCanvas){_snowCanvas.width=window.innerWidth;_snowCanvas.height=window.innerHeight;}}
+  window.addEventListener("resize",resize);
+  resize();
+}
+function toggleSnow(on){
+  if(!_snowCanvas) initSnow();
+  _snowOn=on;
+  if(!_snowCanvas) return;
+  if(!on){_snowCanvas.style.display="none";if(_snowAnim){cancelAnimationFrame(_snowAnim);_snowAnim=null;}return;}
+  _snowCanvas.style.display="block";
+  _snowFlakes=[];
+  for(let i=0;i<80;i++){
+    _snowFlakes.push({
+      x:Math.random()*_snowCanvas.width, y:Math.random()*_snowCanvas.height,
+      r:Math.random()*3+1.5, d:Math.random()*80+20, s:Math.random()*.6+.4,
+      o:Math.random()*.5+.3
+    });
+  }
+  if(_snowAnim) cancelAnimationFrame(_snowAnim);
+  function draw(){
+    if(!_snowCanvas||!_snowCtx||!_snowOn){_snowAnim=null;return;}
+    _snowCtx.clearRect(0,0,_snowCanvas.width,_snowCanvas.height);
+    const isDark=!document.body.classList.contains("theme-light");
+    for(const f of _snowFlakes){
+      f.y+=f.s; f.x+=Math.sin(f.y/f.d)*.3;
+      if(f.y>_snowCanvas.height){f.y=-f.r;f.x=Math.random()*_snowCanvas.width;}
+      _snowCtx.beginPath();
+      _snowCtx.arc(f.x,f.y,f.r,0,Math.PI*2);
+      _snowCtx.fillStyle=isDark?"rgba(255,255,255,"+f.o+")":"rgba(200,200,255,"+f.o+")";
+      _snowCtx.fill();
+    }
+    _snowAnim=requestAnimationFrame(draw);
+  }
+  draw();
+}
 </script>
 </body>
 </html>

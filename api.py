@@ -540,6 +540,9 @@ class Api:
         cur["custom_accent"] = storage.validate_color(patch.get("custom_accent", cur.get("custom_accent", "")))
         cur["custom_surface"] = storage.validate_color(patch.get("custom_surface", cur.get("custom_surface", "")))
         cur["custom_font"] = str(patch.get("custom_font", cur.get("custom_font", ""))).strip()[:100]
+        # ---- снежинки ----
+        if "snow_enabled" in patch:
+            cur["snow_enabled"] = bool(patch["snow_enabled"])
         # ---- новости ----
         cur["news_off"] = bool(patch.get("news_off", cur.get("news_off", False)))
         if "last_news_id" in patch:
