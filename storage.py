@@ -281,9 +281,21 @@ def validate_dns(value: str) -> str:
     return "1.1.1.1"
 
 
+_URL_JUNK_CHARS = "\ufeff\u200b\u200c\u200d\u200e\u200f"
+
+
+def clean_url(url: str) -> str:
+    """Убирает мусор вокруг URL из буфера (BOM, zero-width, кавычки, скобки, пунктуацию)."""
+    v = (url or "").strip()
+    v = "".join(ch for ch in v if ch not in _URL_JUNK_CHARS)
+    v = v.strip().strip("\"'<>()[]{}").strip().strip("\u00ab\u00bb\u201c\u201d\u2018\u2019").strip()
+    v = v.strip().strip(".,;:").strip()
+    return v
+
+
 def validate_url(url: str) -> str:
     """Проверяет, что URL использует допустимую схему (http/https)."""
-    v = (url or "").strip()
+    v = clean_url(url)
     if not v:
         return ""
     low = v.lower()

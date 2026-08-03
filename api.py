@@ -749,6 +749,35 @@ class Api:
         except Exception as e:
             return {"log": "", "error": str(e)}
 
+    def read_clipboard(self):
+        """Читает текст из системного буфера обмена (Windows, через ctypes).
+
+        Надёжнее navigator.clipboard.readText(), который в WebView2 часто
+        блокируется из-за отсутствия разрешения clipboard-read.
+        """
+        import ctypes
+        text = ""
+        try:
+            user32 = ctypes.windll.user32
+            CF_UNICODETEXT = 13
+            user32.OpenClipboard.argtypes = [ctypes.c_void_p]
+            user32.OpenClipboard.restype = ctypes.c_int
+            user32.IsClipboardFormatAvailable.argtypes = [ctypes.c_uint]
+            user32.IsClipboardFormatAvailable.restype = ctypes.c_int
+            user32.GetClipboardData.argtypes = [ctypes.c_uint]
+            user32.GetClipboardData.restype = ctypes.c_void_p
+            if user32.OpenClipboard(None):
+                try:
+                    if user32.IsClipboardFormatAvailable(CF_UNICODETEXT):
+                        h = user32.GetClipboardData(CF_UNICODETEXT)
+                        if h:
+                            text = ctypes.wstring_at(h) or ""
+                finally:
+                    user32.CloseClipboard()
+        except Exception:
+            pass
+        return {"text": text}
+
     # ------------------------------------------------------------ новости
     def get_news(self):
         return self._fetch_channel_news("LEDOKOL_CHANNEL")

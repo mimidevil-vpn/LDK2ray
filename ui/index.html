@@ -143,6 +143,11 @@ body::before{
 .home-stat{display:flex; flex-direction:column; align-items:center; gap:4px;}
 .home-stat .val{font-size:18px; font-weight:700; font-variant-numeric:tabular-nums;}
 .home-stat .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+.home-modes{width:100%; max-width:280px; margin:-8px 0 16px; text-align:left;}
+.home-modes .set-row{min-height:44px; padding:9px 2px;}
+.home-modes .set-row:first-of-type{border-bottom:1px solid var(--border);}
+.home-modes .lbl{font-size:13px;}
+.home-modes .lbl i{display:block; font-style:normal; font-size:11px; color:var(--muted); margin-top:1px;}
 
 /* ===== BOTTOM NAV ===== */
 nav{position:fixed; bottom:0; left:0; right:0; height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px)); padding-bottom:env(safe-area-inset-bottom,0px); background:var(--bg-2); border-top:1px solid var(--border); display:flex; align-items:center; z-index:100; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding-left:4px; padding-right:4px;}
@@ -548,6 +553,14 @@ button:disabled:active, button.locked:active{transform:none;}
           <span class="hp-name" id="homeProfileName">—</span>
         </div>
         <button class="btn" id="homeConnectBtn" style="width:100%;margin-bottom:16px;max-width:280px" data-i18n="connect_btn"></button>
+        <div class="home-modes">
+          <div class="set-row"><span class="lbl"><span data-i18n="set_proxy"></span><i data-i18n="set_proxy_hint"></i></span>
+            <label class="switch"><input type="checkbox" id="homeProxyToggle"><span class="track"></span></label>
+          </div>
+          <div class="set-row" style="border-bottom:0"><span class="lbl"><span data-i18n="set_tun"></span><i data-i18n="set_tun_hint"></i></span>
+            <label class="switch"><input type="checkbox" id="homeTunToggle"><span class="track"></span></label>
+          </div>
+        </div>
         <div class="home-stats">
           <div class="home-stat"><span class="val" id="homeDown">0</span><span class="lbl" data-i18n="download"></span></div>
           <div class="home-stat"><span class="val" id="homeUp">0</span><span class="lbl" data-i18n="upload"></span></div>
@@ -956,6 +969,7 @@ const I18N = {
     welcome_err_format:"Неверный формат", welcome_err_invalid:"Неверная подписка",
     welcome_err_empty:"Подписка пуста", welcome_err_connect:"Ошибка подключения",
     welcome_err_timeout:"Таймаут", welcome_success:"Подключено",
+    clipboard_empty:"Буфер обмена пуст", clipboard_err:"Не удалось прочитать буфер",
     hub_badge:"MIMI", hub_title:"mimi crack",
     hub_p1:"VPN-клиент с поддержкой VLESS, VMess, Trojan, Shadowsocks",
     hub_p2:"Подписки, телеметрия и управление серверами",
@@ -1049,6 +1063,7 @@ const I18N = {
     welcome_err_format:"Invalid format", welcome_err_invalid:"Invalid subscription",
     welcome_err_empty:"Subscription empty", welcome_err_connect:"Connection error",
     welcome_err_timeout:"Timeout", welcome_success:"Connected",
+    clipboard_empty:"Clipboard is empty", clipboard_err:"Failed to read clipboard",
     hub_badge:"MIMI", hub_title:"mimi crack",
     hub_p1:"VPN client with VLESS, VMess, Trojan, Shadowsocks support",
     hub_p2:"Subscriptions, telemetry and server management",
@@ -1308,9 +1323,11 @@ $("sheetQR").addEventListener("click", async ()=>{ closeSheet(); if(api()&&api()
 $("sheetClipboard").addEventListener("click", async ()=>{ closeSheet(); try{
   let txt="";
   if(typeof AndroidBridge!=="undefined"){ const r=JSON.parse(AndroidBridge.call("read_clipboard","")); txt=(r&&r.text)||""; }
+  else if(api()&&api().read_clipboard){ const r=await api().read_clipboard(); txt=(r&&r.text)||""; }
   else{ txt=await navigator.clipboard.readText().catch(()=>""); }
   if(txt){ importLinks(txt); }
-}catch(e){ toast("Не удалось прочитать буфер",true); } });
+  else{ toast(t("clipboard_empty"),true); }
+}catch(e){ toast(t("clipboard_err"),true); } });
 $("sheetManual").addEventListener("click", ()=>{ closeSheet(); openAddPanel(); });
 $("sheetConnSettings").addEventListener("click", ()=>{ closeSheet(); switchTab("settings"); });
 
@@ -1324,13 +1341,19 @@ async function importFile(){
   input.click();
 }
 async function importLinks(txt){
-  if(!txt.trim()) return;
+  const clean=(txt||"").trim().replace(/^[\s\uFEFF\u200B]+|[\s\uFEFF\u200B]+$/g,"");
+  if(!clean) return;
+  const urls=clean.split(/\s+/).filter(Boolean);
+  if(urls.length===1 && /^https?:\/\/\S+$/i.test(urls[0])){
+    applySubUrl(urls[0]);
+    return;
+  }
   let r;
   if(typeof AndroidBridge!=="undefined"){
-    try{ r=JSON.parse(AndroidBridge.call("add_links",JSON.stringify([txt.trim()]))); }catch(e){ toast(t("err_generic")+e,true); return; }
+    try{ r=JSON.parse(AndroidBridge.call("add_links",JSON.stringify([clean]))); }catch(e){ toast(t("err_generic")+e,true); return; }
   }else{
     if(!api()) return;
-    r=await api().add_links(txt.trim());
+    r=await api().add_links(clean);
   }
   if(r.error){ toast(r.error,true); return; }
   STATE=r.state||STATE; renderServers(); updateHome();
@@ -1367,6 +1390,7 @@ function updateHome(){
   }
   updateTopbar();
   updateHomeConnectBtn();
+  updateHomeModes();
 }
 $("homeProfile").addEventListener("click",()=>{switchTab("profile")});
 $("homeConnectBtn").addEventListener("click", toggleConnect);
@@ -1688,22 +1712,28 @@ async function applyLinksFromBox(){
   STATE=r.state;$("linksBox").value="";renderServers();updateHome();renderProfile();
   switchTab("servers");toast(t("added")+r.added);
 }
-async function applySubFromBox(){
-  const url=$("subBox").value;
+async function applySubUrl(url){
   if(!url) return;
-  const btn=$("subBtn");btn.disabled=true;const old=btn.textContent;btn.textContent=t("sub_loading");toast(t("sub_loading"));
+  const btn=$("subBtn");
+  if(btn){btn.disabled=true;const old=btn.textContent;btn.textContent=t("sub_loading");}
+  toast(t("sub_loading"));
   let r;
   try{
     if(typeof AndroidBridge!=="undefined"){
       r=await new Promise(resolve=>{ window.__importSubResult=resolve; try{AndroidBridge.call("import_subscription",JSON.stringify([url]));}catch(e){resolve({error:"generic"});} });
     }else{
-      if(!api()){ btn.disabled=false;btn.textContent=old; return; }
+      if(!api()){ if(btn){btn.disabled=false;btn.textContent=old;} return; }
       r=await api().import_subscription(url);
     }
   }catch(e){ r={error:"generic"}; }
-  if(r.error){toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true);btn.disabled=false;btn.textContent=old;return;}
+  if(r.error){toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true);if(btn){btn.disabled=false;btn.textContent=old;}return;}
   STATE=r.state;renderServers();updateHome();renderProfile();switchTab("servers");toast(t("sub_loaded")+r.added);
-  btn.disabled=false;btn.textContent=old;
+  if(btn){btn.disabled=false;btn.textContent=old;}
+}
+function applySubFromBox(){
+  const url=($("subBox").value||"").trim();
+  if(!url) return;
+  applySubUrl(url);
 }
 $("addBtn").addEventListener("click", applyLinksFromBox);
 $("subBtn").addEventListener("click", applySubFromBox);
@@ -1719,8 +1749,35 @@ $("closeRoutesBtn").addEventListener("click",()=>switchTab("settings"));
 
 /* ===== SETTINGS ===== */
 function fillSettings(){ const s=STATE.settings||{}; $("setSocks").value=s.socks_port??10808; $("setHttp").value=s.http_port??10809; $("setDns").value=s.tun_dns||"1.1.1.1"; if($("snowToggle"))$("snowToggle").checked=!!s.snow_enabled; if($("proxyToggle"))$("proxyToggle").checked=s.system_proxy!==false; if($("tunToggle"))$("tunToggle").checked=!!s.tun_mode; }
-$("proxyToggle").addEventListener("change",async()=>{ if(!api())return; try{ const r=await api().set_modes({proxy:$("proxyToggle").checked}); if(r&&r.state)STATE=r.state; }catch(e){} });
-$("tunToggle").addEventListener("change",async()=>{ if(!api())return; const on=$("tunToggle").checked; let r; try{ r=await api().set_modes({tun:on}); }catch(e){ $("tunToggle").checked=!on; return; } if(r&&r.error){ $("tunToggle").checked=!on; if(r.error==="need_admin"&&confirm(t("tun_restart"))){ try{ await api().request_admin(); }catch(e){} } else if(r.error==="no_tun2socks"){ toast("tun2socks не найден",true); } else{ toast(r.error,true); } return; } if(r&&r.state)STATE=r.state; });
+async function setProxyMode(on, el){
+  if(!api()){ if(el)el.checked=!on; return; }
+  try{ const r=await api().set_modes({proxy:on}); if(r&&r.state)STATE=r.state; if(el&&r&&r.error)el.checked=!on; }catch(e){ if(el)el.checked=!on; }
+  updateHomeModes();
+}
+async function setTunMode(on, el){
+  if(!api()){ if(el)el.checked=!on; return; }
+  let r;
+  try{ r=await api().set_modes({tun:on}); }catch(e){ if(el)el.checked=!on; return; }
+  if(r&&r.error){
+    if(el)el.checked=!on;
+    if(r.error==="need_admin"&&confirm(t("tun_restart"))){ try{ await api().request_admin(); }catch(e){} }
+    else if(r.error==="no_tun2socks"){ toast("tun2socks не найден",true); }
+    else{ toast(r.error,true); }
+    return;
+  }
+  if(r&&r.state)STATE=r.state;
+  updateHomeModes();
+}
+function updateHomeModes(){
+  const s=STATE.settings||{};
+  const hp=$("homeProxyToggle"), ht=$("homeTunToggle");
+  if(hp) hp.checked=s.system_proxy!==false;
+  if(ht) ht.checked=!!s.tun_mode;
+}
+$("proxyToggle").addEventListener("change",()=>setProxyMode($("proxyToggle").checked,$("proxyToggle")));
+$("tunToggle").addEventListener("change",()=>setTunMode($("tunToggle").checked,$("tunToggle")));
+$("homeProxyToggle").addEventListener("change",()=>setProxyMode($("homeProxyToggle").checked,$("homeProxyToggle")));
+$("homeTunToggle").addEventListener("change",()=>setTunMode($("homeTunToggle").checked,$("homeTunToggle")));
 $("saveBtn").addEventListener("click",async()=>{ if(!api())return; const patch={socks_port:parseInt($("setSocks").value)||10808,http_port:parseInt($("setHttp").value)||10809,tun_dns:$("setDns").value.trim()||"1.1.1.1",theme:THEME,lang:LANG}; STATE=await api().save_settings(patch); toast(STATE.saved===false?t("save_failed"):t("saved"),STATE.saved===false); });
 $("debugLogBtn").addEventListener("click",async()=>{ try{ let r; if(typeof AndroidBridge!=="undefined"){ r=JSON.parse(AndroidBridge.call("get_debug_log","[]")); }else{ if(!api())return; r=await api().get_debug_log(); } if(r&&r.log){ navigator.clipboard.writeText(r.log).then(()=>toast("Debug log copied")).catch(()=>toast("Failed to copy")); }else{ toast("Debug log is empty"); } }catch(e){ toast("Error: "+e.message,true); } });
 
@@ -1826,7 +1883,7 @@ window.__importResult = null;
 window.__importSubResult = null;
 window.__refreshSubResult = null;
 window.__connectResult = null;
-async function tryImportSub(){ if(_importingSub)return; const v=($("subInput").value||"").trim(); if(!v)return; if(!/^https?:\/\/.+/i.test(v)){showSubError(t("welcome_err_format"));return;} _importingSub=true;const btn=$("subNextBtn");btn.classList.add("loading");hideSubError();
+async function tryImportSub(){ if(_importingSub)return; const raw=($("subInput").value||""); const v=raw.replace(/^[\s\uFEFF\u200B"'\u00AB\u00BB\u201C\u201D\u2018\u2019<>()\[\]{}]+|[\s\uFEFF\u200B"'\u00AB\u00BB\u201C\u201D\u2018\u2019<>()\[\]{}.,;:]+$/g,""); if(!v)return; if(!/^https?:\/\/\S+$/i.test(v)){showSubError(t("welcome_err_format"));return;} _importingSub=true;const btn=$("subNextBtn");btn.classList.add("loading");hideSubError();
   if(typeof AndroidBridge!=="undefined"){ try{AndroidBridge.call("import_subscription_async",JSON.stringify([v]));}catch(e){showSubError(t("err_generic")+e);btn.classList.remove("loading");_importingSub=false;} return; }
   if(!api()){ showSubError(t("welcome_err_connect"));btn.classList.remove("loading");_importingSub=false; return; }
   try{ const r=await api().import_subscription(v); __importResult(r); }
