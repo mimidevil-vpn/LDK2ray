@@ -635,7 +635,13 @@ button:disabled:active, button.locked:active{transform:none;}
         <div class="card" style="padding:0 16px;margin-bottom:16px">
           <div class="set-row"><span class="lbl" data-i18n="set_dns"></span><input type="text" class="field ctl narrow" id="setDns"></div>
           <div class="set-row"><span class="lbl" data-i18n="set_socks"></span><input type="number" class="field ctl narrow" id="setSocks"></div>
-          <div class="set-row" style="border-bottom:0"><span class="lbl" data-i18n="set_http"></span><input type="number" class="field ctl narrow" id="setHttp"></div>
+          <div class="set-row"><span class="lbl" data-i18n="set_http"></span><input type="number" class="field ctl narrow" id="setHttp"></div>
+          <div class="set-row"><span class="lbl"><span data-i18n="set_proxy"></span><i data-i18n="set_proxy_hint"></i></span>
+            <label class="switch"><input type="checkbox" id="proxyToggle"><span class="track"></span></label>
+          </div>
+          <div class="set-row" style="border-bottom:0"><span class="lbl"><span data-i18n="set_tun"></span><i data-i18n="set_tun_hint"></i></span>
+            <label class="switch"><input type="checkbox" id="tunToggle"><span class="track"></span></label>
+          </div>
         </div>
       </div>
 
@@ -869,7 +875,7 @@ button:disabled:active, button.locked:active{transform:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-var __IS_ANDROID = true;
+var __IS_ANDROID = false;
 const $ = id => document.getElementById(id);
 const qs = (s,p) => (p||document).querySelector(s);
 const qsa = (s,p) => Array.from((p||document).querySelectorAll(s));
@@ -890,6 +896,9 @@ const I18N = {
     add_btn:"Добавить серверы", sub_label:"Импорт из подписки", sub_btn:"Импортировать",
     set_socks:"Порт SOCKS", set_http:"Порт HTTP",
     set_dns:"DNS для туннеля",
+    set_proxy:"Прокси", set_proxy_hint:"Системный прокси Windows",
+    set_tun:"Туннель", set_tun_hint:"Весь трафик через TUN (нужен админ)",
+    tun_restart:"Для режима «Туннель» нужны права администратора. Перезапустить приложение с админ-правами?",
     set_theme:"Тема",
     set_bg:"Фон", set_bg_hint:"Картинка из галереи под интерфейсом",
     set_bg_pick:"Галерея", set_bg_clear:"Убрать",
@@ -963,6 +972,7 @@ const I18N = {
     done:"Готово", cancel:"Отмена", country:"Страна", city:"Город",
     uptime:"Время работы", speed:"Скорость", traffic:"Трафик",
     connection_error:"Ошибка подключения",
+    need_admin:"Режим «Туннель» требует прав администратора. Включите Туннель в настройках — приложение перезапустится с админ-правами",
     retry:"Повторить", switch_server:"Сменить сервер", view_logs:"Логи",
     vpn_permission_title:"Разрешение VPN",
     vpn_permission_desc:"Необходимо подтвердить подключение VPN"
@@ -979,6 +989,9 @@ const I18N = {
     add_btn:"Add servers", sub_label:"Import from subscription", sub_btn:"Import",
     set_socks:"SOCKS port", set_http:"HTTP port",
     set_dns:"Tunnel DNS",
+    set_proxy:"Proxy", set_proxy_hint:"Windows system proxy",
+    set_tun:"Tunnel", set_tun_hint:"All traffic through TUN (admin required)",
+    tun_restart:"Tunnel mode requires administrator rights. Restart the app as administrator?",
     set_theme:"Theme",
     set_bg:"Background", set_bg_hint:"Image from gallery behind the UI",
     set_bg_pick:"Gallery", set_bg_clear:"Remove",
@@ -1052,6 +1065,7 @@ const I18N = {
     done:"Done", cancel:"Cancel", country:"Country", city:"City",
     uptime:"Uptime", speed:"Speed", traffic:"Traffic",
     connection_error:"Connection error",
+    need_admin:"Tunnel mode requires administrator rights. Enable Tunnel in Settings — the app will restart with admin rights",
     retry:"Retry", switch_server:"Switch server", view_logs:"Logs",
     vpn_permission_title:"VPN Permission",
     vpn_permission_desc:"VPN connection confirmation required"
@@ -1076,7 +1090,12 @@ const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)")
 function systemDark(){ return mq ? mq.matches : true; }
 function effectiveDark(){ return THEME==="dark" || (THEME==="auto" && systemDark()); }
 const IS_DESKTOP = (typeof AndroidBridge === "undefined");
-if(IS_DESKTOP) document.body.classList.add("platform-desktop");
+if(IS_DESKTOP){
+  document.body.classList.add("platform-desktop");
+  const st=document.createElement("style");
+  st.textContent=".platform-desktop #sheetQR{display:none;}";
+  document.head.appendChild(st);
+}
 
 function applyTheme(){
   const dark=effectiveDark();
@@ -1086,7 +1105,11 @@ function applyTheme(){
   if(btn) btn.innerHTML = THEME==="auto" ? AUTO : (dark ? MOON : SUN);
   applyCustomBg();
 }
-function bgActive(){ return !!(STATE&&STATE.settings&&(STATE.settings.custom_bg||"").indexOf("data:")===0); }
+function bgActive(){
+  if(!STATE||!STATE.settings) return false;
+  if((STATE.settings.custom_bg||"").indexOf("data:")===0) return true;
+  return !!(IS_DESKTOP && (STATE.background_image||STATE.settings.background_image));
+}
 function themeLocked(){ return false; }
 function updateThemeLock(){
   ["themeBtn","themeAutoBtn","themeLightBtn","themeDarkBtn"].forEach(id=>{ const el=$(id); if(el) el.classList.remove("locked"); });
@@ -1112,20 +1135,30 @@ function applyBgFit(img){
 window.addEventListener("resize", ()=>{
   if(window.__bgImg && document.body.classList.contains("custom-bg")) applyBgFit(window.__bgImg);
 });
+function setBgImg(src){
+  const el=document.documentElement;
+  const prop='url("'+src+'")';
+  if(el.style.getPropertyValue("--custom-bg")!==prop) el.style.setProperty("--custom-bg",prop);
+  if(!document.body.classList.contains("custom-bg")){
+    /* предзагрузка: класс вешаем только когда картинка уже декодирована,
+       иначе подложка тает сквозь полупрозрачные слои до её появления */
+    const img=new Image();
+    img.onload=()=>{ window.__bgImg=img; applyBgFit(img); document.body.classList.add("custom-bg"); };
+    img.onerror=()=>document.body.classList.add("custom-bg");
+    img.src=src;
+  }
+}
+async function loadDesktopBg(){
+  if(!IS_DESKTOP||!api()) return;
+  try{ const r=await api().get_background(); if(r&&r.data) setBgImg("data:image/png;base64,"+r.data); }catch(e){}
+}
 function applyCustomBg(){
   const s=bgActive()?(STATE.settings.custom_bg||""):"";
   const el=document.documentElement;
-  if(s){
-    const prop='url("'+s+'")';
-    if(el.style.getPropertyValue("--custom-bg")!==prop) el.style.setProperty("--custom-bg",prop);
-    if(!document.body.classList.contains("custom-bg")){
-      /* предзагрузка: класс вешаем только когда картинка уже декодирована,
-         иначе подложка тает сквозь полупрозрачные слои до её появления */
-      const img=new Image();
-      img.onload=()=>{ window.__bgImg=img; applyBgFit(img); document.body.classList.add("custom-bg"); };
-      img.onerror=()=>document.body.classList.add("custom-bg");
-      img.src=s;
-    }
+  if(s && s.indexOf("data:")===0){
+    setBgImg(s);
+  }else if(bgActive() && IS_DESKTOP){
+    loadDesktopBg();
   }else{
     window.__bgImg=null;
     document.body.classList.remove("custom-bg");
@@ -1142,14 +1175,38 @@ window.__bgPicked=function(uri){
 };
 $("bgPickBtn").addEventListener("click",()=>{
   if(typeof AndroidBridge!=="undefined"){ try{ AndroidBridge.call("pick_bg","[]"); }catch(e){ toast(t("err_generic")+e,true); } }
+  else if(api()){ pickDesktopBg(); }
   else{ toast(t("bg_only_android"),true); }
 });
+function pickDesktopBg(){
+  const input=document.createElement("input");
+  input.type="file"; input.accept="image/*"; input.style.display="none";
+  input.onchange=()=>{
+    const f=input.files&&input.files[0];
+    if(!f) return;
+    const reader=new FileReader();
+    reader.onload=async ()=>{
+      const data=String(reader.result||"");
+      if(!data){ toast(t("bg_failed"),true); return; }
+      const b64=data.indexOf(",")>=0?data.split(",",2)[1]:data;
+      try{
+        const r=await api().upload_background(b64);
+        if(r&&r.state) STATE=r.state;
+        if(r&&r.ok){ applyCustomBg(); toast(t("bg_set")); }
+        else{ toast(t("bg_failed"),true); }
+      }catch(e){ toast(t("bg_failed"),true); }
+    };
+    reader.onerror=()=>toast(t("bg_failed"),true);
+    reader.readAsDataURL(f);
+  };
+  document.body.appendChild(input); input.click(); input.remove();
+}
 $("bgClearBtn").addEventListener("click",async()=>{
   if(STATE.settings) STATE.settings.custom_bg="";
   applyCustomBg();
   try{
     if(typeof AndroidBridge!=="undefined"){ STATE=JSON.parse(AndroidBridge.call("save_settings",JSON.stringify([{custom_bg:""}]))); }
-    else if(api()){ STATE=await api().save_settings({custom_bg:""}); }
+    else if(api()){ const r=await api().remove_background(); if(r&&r.state) STATE=r.state; applyCustomBg(); }
   }catch(e){}
   toast(t("bg_cleared"));
 });
@@ -1247,8 +1304,13 @@ $("sheetConnect").addEventListener("click", ()=>{ closeSheet(); toggleConnect();
 $("sheetSelectServer").addEventListener("click", ()=>{ closeSheet(); switchTab("servers"); });
 $("sheetAddSub").addEventListener("click", ()=>{ closeSheet(); openAddPanel(); });
 $("sheetImportUrl").addEventListener("click", ()=>{ closeSheet(); openAddPanel(); });
-$("sheetQR").addEventListener("click", async ()=>{ closeSheet(); if(api()) api().scan_qr(); });
-$("sheetClipboard").addEventListener("click", ()=>{ closeSheet(); try{ const r=JSON.parse(AndroidBridge.call("read_clipboard","")); if(r&&r.text){ const txt=r.text; if(txt){ importLinks(txt); } } }catch(e){ toast("Не удалось прочитать буфер",true); } });
+$("sheetQR").addEventListener("click", async ()=>{ closeSheet(); if(api()&&api().scan_qr) api().scan_qr(); });
+$("sheetClipboard").addEventListener("click", async ()=>{ closeSheet(); try{
+  let txt="";
+  if(typeof AndroidBridge!=="undefined"){ const r=JSON.parse(AndroidBridge.call("read_clipboard","")); txt=(r&&r.text)||""; }
+  else{ txt=await navigator.clipboard.readText().catch(()=>""); }
+  if(txt){ importLinks(txt); }
+}catch(e){ toast("Не удалось прочитать буфер",true); } });
 $("sheetManual").addEventListener("click", ()=>{ closeSheet(); openAddPanel(); });
 $("sheetConnSettings").addEventListener("click", ()=>{ closeSheet(); switchTab("settings"); });
 
@@ -1380,10 +1442,28 @@ async function toggleConnect(){
     openSheet(); return;
   }
   const sv = STATE.servers[STATE.selected];
-  // Request VPN permission via bridge
-  showConnPermission();
-  try { AndroidBridge.call("request_vpn_permission", "[]"); }
-  catch(e) { hideConnOverlay(); toast(String(e), true); }
+  if(typeof AndroidBridge!=="undefined"){
+    // Android: просим системное разрешение VPN
+    showConnPermission();
+    try { AndroidBridge.call("request_vpn_permission", "[]"); }
+    catch(e) { hideConnOverlay(); toast(String(e), true); }
+    return;
+  }
+  // Desktop: коннектимся напрямую через API
+  showConnecting(sv.name);
+  try{
+    const r = await api().connect(STATE.selected);
+    if(r && r.error==="need_admin"){
+      showConnError(t("need_admin"));
+      return;
+    }
+    if(r && r.error){ showConnError(r.error); return; }
+    if(r && r.state) STATE = r.state;
+    showConnected(sv);
+    updateHome();
+  }catch(e){
+    showConnError(String(e));
+  }
 }
 
 /* Called by native when QR scan result is available */
@@ -1403,6 +1483,7 @@ window.__qrScanned = function(content){
 
 /* Called by native when VPN permission result is available */
 window.__vpnPermissionGranted = function(granted){
+  if(typeof AndroidBridge==="undefined"){ toggleConnect(); return; }
   if(!granted){
     if(CONN_PHASE) showConnOverlay(null);
     toast(t("connection_error"), true);
@@ -1592,7 +1673,7 @@ function renderProfile(){
 }
 $("tgLinkBtn").addEventListener("click",()=>{ const v=$("tgInput").value.trim(); if(!v){toast(t("tg_err_bad_username"),true);return;} const btn=$("tgLinkBtn");btn.disabled=true;const old=btn.textContent;btn.textContent=t("tg_linking"); let settled=false; const done=(r)=>{ if(settled)return; settled=true; if(!r)r={error:"network"}; if(r.error){toast((t("tg_err_"+r.error)||t("err_generic")+r.error)+(r.detail?" — "+r.detail:""),true);}else{STATE=r.state;$("tgInput").value="";renderProfile();toast(t("tg_ok"));} btn.disabled=false;btn.textContent=old; }; if(typeof AndroidBridge!=="undefined"){ window.__tgLinkResult=done; setTimeout(()=>done({error:"network"}),35000); try{AndroidBridge.call("link_telegram_async",JSON.stringify([v]));}catch(e){done({error:"network"});} return; } api().link_telegram(v).then(done).catch(()=>done({error:"network"})); });
 $("tgUnlinkBtn").addEventListener("click",async()=>{ let r; if(typeof AndroidBridge!=="undefined"){ try{ r=JSON.parse(AndroidBridge.call("unlink_telegram","[]")); }catch(e){ return; } } else { if(!api())return; r=await api().unlink_telegram(); } if(!r||!r.state)return; STATE=r.state; const box=$("profAvatar"); box.classList.add("ios-tile"); box.innerHTML='<span class="glow"></span><svg viewBox="0 0 1280 1217" fill="currentColor"><g transform="translate(0,1217) scale(0.1,-0.1)"><path d="M5970 11298 l0 -873 -448 448 -447 447 -305 -305 -305 -305 753 -752 752 -752 -2 -366 -3 -365 -905 478 c-498 262 -911 476 -918 475 -23 -4 -621 -442 -622 -456 0 -7 38 -237 85 -510 239 -1395 273 -1596 269 -1600 -2 -3 -181 53 -398 124 l-393 128 -474 930 c-261 511 -479 937 -485 945 -9 12 -71 -16 -392 -180 l-381 -194 285 -558 c157 -307 284 -560 282 -561 -2 -2 -368 115 -813 260 -446 145 -816 265 -824 267 -14 3 -38 -64 -214 -607 -36 -110 -63 -203 -59 -206 9 -8 1616 -529 1631 -529 6 0 11 -3 11 -7 0 -5 -252 -136 -559 -293 l-559 -285 110 -215 c160 -312 280 -545 282 -547 1 -1 426 213 944 477 518 264 946 480 951 480 15 0 695 -221 703 -229 4 -3 -310 -314 -697 -691 -388 -377 -705 -689 -705 -694 0 -9 154 -489 213 -666 l22 -65 155 -22 c773 -111 1933 -283 1937 -286 5 -5 -524 -737 -533 -737 -5 0 -1047 -165 -1743 -275 -190 -31 -346 -56 -347 -58 -3 -2 128 -839 132 -845 1 -2 281 41 623 96 341 54 621 97 621 96 0 -2 -230 -319 -510 -705 -281 -386 -509 -703 -508 -705 2 -1 158 -115 348 -253 314 -229 346 -250 358 -234 7 10 236 326 510 702 394 543 498 680 504 665 6 -16 81 -480 177 -1102 10 -62 20 -114 22 -116 2 -1 193 27 424 64 l420 67 -2 24 c-3 32 -33 224 -158 1009 -58 366 -120 756 -137 866 l-31 201 253 348 254 348 15 -34 c9 -18 208 -423 442 -899 l426 -865 390 -3 389 -2 229 462 c126 255 327 660 446 901 l217 438 251 -345 c138 -189 251 -352 251 -361 0 -15 -30 -206 -234 -1495 -47 -294 -86 -548 -88 -564 l-3 -29 420 -67 c372 -59 421 -65 427 -51 4 9 46 264 93 566 48 303 90 571 94 598 5 26 10 50 13 53 3 3 232 -307 508 -688 277 -381 506 -696 510 -701 4 -5 647 451 693 493 4 4 -222 323 -502 710 -281 386 -511 703 -511 704 0 1 280 -42 621 -96 342 -54 623 -97 624 -96 4 6 134 842 131 845 -2 2 -216 37 -477 78 -261 42 -730 116 -1044 166 -316 50 -575 95 -581 102 -21 22 -525 720 -522 723 4 3 132 22 1675 244 229 33 418 61 419 63 7 8 234 717 233 728 0 8 -317 322 -705 699 -387 376 -700 688 -696 691 4 4 164 57 356 119 l349 113 71 -35 c39 -20 464 -236 945 -481 l875 -446 16 27 c9 15 97 187 197 382 l181 356 -559 284 c-307 157 -555 288 -551 291 4 4 372 125 817 269 446 145 813 265 817 269 4 3 -38 143 -93 311 -54 168 -113 349 -130 403 -19 58 -36 97 -44 97 -8 0 -379 -119 -827 -264 -447 -146 -814 -263 -815 -262 -2 2 125 254 281 562 157 307 284 559 283 560 -1 0 -172 88 -380 194 -209 106 -382 188 -387 184 -5 -5 -223 -430 -485 -944 -262 -514 -477 -935 -478 -936 -9 -9 -780 -254 -785 -250 -4 5 40 272 289 1711 54 313 66 402 56 411 -14 12 -586 427 -603 437 -6 4 -423 -209 -925 -473 l-914 -479 -3 367 -2 367 752 752 753 753 -305 305 -305 305 -447 -447 -448 -448 0 873 0 872 -430 0 -430 0 0 -872z m-725 -3418 l720 -379 3 -660 c1 -364 -2 -661 -6 -661 -17 0 -1145 369 -1152 377 -4 4 -33 157 -64 338 -190 1117 -227 1332 -230 1348 -2 9 -1 17 2 17 4 0 331 -171 727 -380z m2900 -476 c-80 -467 -147 -849 -148 -850 -5 -4 -1151 -374 -1158 -374 -5 0 -9 290 -9 658 l0 658 727 381 c400 210 729 380 731 378 2 -2 -62 -385 -143 -851z m-3067 -1844 c339 -111 618 -202 619 -204 6 -6 -659 -917 -673 -923 -12 -4 -1663 233 -1671 240 -1 2 66 71 150 154 231 228 952 932 955 932 2 1 281 -89 620 -199z m3818 -342 c305 -298 551 -544 547 -548 -12 -10 -1648 -244 -1664 -238 -15 6 -683 918 -677 924 3 2 1227 402 1236 404 2 0 253 -244 558 -542z m-2147 -848 c188 -258 344 -475 347 -483 6 -17 -37 -108 -416 -872 -156 -313 -285 -563 -288 -555 -3 8 -145 298 -317 645 -376 761 -380 769 -369 788 23 39 688 947 694 947 4 0 161 -211 349 -470z"/></g></svg>'; renderProfile(); });
-$("refreshSubBtn").addEventListener("click",()=>{ const btn=$("refreshSubBtn");btn.disabled=true;const old=btn.textContent;btn.textContent=t("sub_loading"); window.__refreshSubResult=function(r){ if(r.error){toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true);btn.disabled=false;btn.textContent=old;return;} STATE=r.state;renderServers();renderProfile();updateHome();toast(t("sub_refreshed"));btn.disabled=false;btn.textContent=old; }; AndroidBridge.call("refresh_subscription",""); });
+$("refreshSubBtn").addEventListener("click",async()=>{ const btn=$("refreshSubBtn");btn.disabled=true;const old=btn.textContent;btn.textContent=t("sub_loading"); let r; try{ if(typeof AndroidBridge!=="undefined"){ r=await new Promise(resolve=>{ window.__refreshSubResult=resolve; try{AndroidBridge.call("refresh_subscription","");}catch(e){resolve({error:"generic"});} }); } else { if(!api())return; r=await api().refresh_subscription(); } if(r.error){ toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true); return; } STATE=r.state;renderServers();renderProfile();updateHome();toast(t("sub_refreshed")); }catch(e){ toast(t("err_generic")+e,true); }finally{ btn.disabled=false;btn.textContent=old; } });
 $("delAllServersBtn").addEventListener("click",async()=>{if(!confirm(t("del_all_confirm")))return;const btn=$("delAllServersBtn");btn.disabled=true;try{const r=await api().delete_all_servers();STATE=r;renderServers();renderProfile();updateHome();toast(t("del_all_done"));}catch(e){toast(t("err_generic")+e,true);}finally{btn.disabled=false;}});
 function fmtDate(ts){ try{const d=new Date(ts*1000);return d.toLocaleDateString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"2-digit",year:"numeric"});}catch(e){return"—";} }
 function fmtWhen(ts){ if(!ts)return"—"; try{const d=new Date(ts*1000);return d.toLocaleString(LANG==="en"?"en-GB":"ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(e){return"—";} }
@@ -1607,16 +1688,22 @@ async function applyLinksFromBox(){
   STATE=r.state;$("linksBox").value="";renderServers();updateHome();renderProfile();
   switchTab("servers");toast(t("added")+r.added);
 }
-function applySubFromBox(){
+async function applySubFromBox(){
   const url=$("subBox").value;
   if(!url) return;
   const btn=$("subBtn");btn.disabled=true;const old=btn.textContent;btn.textContent=t("sub_loading");toast(t("sub_loading"));
-  window.__importSubResult=function(r){
-    if(r.error){toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true);btn.disabled=false;btn.textContent=old;return;}
-    STATE=r.state;renderServers();updateHome();renderProfile();switchTab("servers");toast(t("sub_loaded")+r.added);
-    btn.disabled=false;btn.textContent=old;
-  };
-  AndroidBridge.call("import_subscription",JSON.stringify([url]));
+  let r;
+  try{
+    if(typeof AndroidBridge!=="undefined"){
+      r=await new Promise(resolve=>{ window.__importSubResult=resolve; try{AndroidBridge.call("import_subscription",JSON.stringify([url]));}catch(e){resolve({error:"generic"});} });
+    }else{
+      if(!api()){ btn.disabled=false;btn.textContent=old; return; }
+      r=await api().import_subscription(url);
+    }
+  }catch(e){ r={error:"generic"}; }
+  if(r.error){toast((I18N[LANG]["err_"+r.error])||(t("err_generic")+r.error),true);btn.disabled=false;btn.textContent=old;return;}
+  STATE=r.state;renderServers();updateHome();renderProfile();switchTab("servers");toast(t("sub_loaded")+r.added);
+  btn.disabled=false;btn.textContent=old;
 }
 $("addBtn").addEventListener("click", applyLinksFromBox);
 $("subBtn").addEventListener("click", applySubFromBox);
@@ -1631,9 +1718,11 @@ $("openRoutesBtn").addEventListener("click",()=>{switchTab("routes")});
 $("closeRoutesBtn").addEventListener("click",()=>switchTab("settings"));
 
 /* ===== SETTINGS ===== */
-function fillSettings(){ const s=STATE.settings||{}; $("setSocks").value=s.socks_port??10808; $("setHttp").value=s.http_port??10809; $("setDns").value=s.tun_dns||"1.1.1.1"; if($("snowToggle"))$("snowToggle").checked=!!s.snow_enabled; }
+function fillSettings(){ const s=STATE.settings||{}; $("setSocks").value=s.socks_port??10808; $("setHttp").value=s.http_port??10809; $("setDns").value=s.tun_dns||"1.1.1.1"; if($("snowToggle"))$("snowToggle").checked=!!s.snow_enabled; if($("proxyToggle"))$("proxyToggle").checked=s.system_proxy!==false; if($("tunToggle"))$("tunToggle").checked=!!s.tun_mode; }
+$("proxyToggle").addEventListener("change",async()=>{ if(!api())return; try{ const r=await api().set_modes({proxy:$("proxyToggle").checked}); if(r&&r.state)STATE=r.state; }catch(e){} });
+$("tunToggle").addEventListener("change",async()=>{ if(!api())return; const on=$("tunToggle").checked; let r; try{ r=await api().set_modes({tun:on}); }catch(e){ $("tunToggle").checked=!on; return; } if(r&&r.error){ $("tunToggle").checked=!on; if(r.error==="need_admin"&&confirm(t("tun_restart"))){ try{ await api().request_admin(); }catch(e){} } else if(r.error==="no_tun2socks"){ toast("tun2socks не найден",true); } else{ toast(r.error,true); } return; } if(r&&r.state)STATE=r.state; });
 $("saveBtn").addEventListener("click",async()=>{ if(!api())return; const patch={socks_port:parseInt($("setSocks").value)||10808,http_port:parseInt($("setHttp").value)||10809,tun_dns:$("setDns").value.trim()||"1.1.1.1",theme:THEME,lang:LANG}; STATE=await api().save_settings(patch); toast(STATE.saved===false?t("save_failed"):t("saved"),STATE.saved===false); });
-$("debugLogBtn").addEventListener("click",()=>{ try{ const r=JSON.parse(AndroidBridge.call("get_debug_log","[]")); if(r.log){ navigator.clipboard.writeText(r.log).then(()=>toast("Debug log copied")).catch(()=>toast("Failed to copy")); } }catch(e){ toast("Error: "+e.message,true); } });
+$("debugLogBtn").addEventListener("click",async()=>{ try{ let r; if(typeof AndroidBridge!=="undefined"){ r=JSON.parse(AndroidBridge.call("get_debug_log","[]")); }else{ if(!api())return; r=await api().get_debug_log(); } if(r&&r.log){ navigator.clipboard.writeText(r.log).then(()=>toast("Debug log copied")).catch(()=>toast("Failed to copy")); }else{ toast("Debug log is empty"); } }catch(e){ toast("Error: "+e.message,true); } });
 
 /* ===== TABS ===== */
 function navTabs(){ return qsa(".nav-item"); }
@@ -1718,7 +1807,7 @@ function renderNews(feedId,html,date){
 $("newsOffToggle").addEventListener("change",async()=>{_newsDisabled=$("newsOffToggle").checked; if(typeof AndroidBridge!=="undefined"){ try{ STATE=JSON.parse(AndroidBridge.call("save_settings",JSON.stringify([{news_off:_newsDisabled}]))); }catch(err){} } else if(api()){ STATE=await api().save_settings({news_off:_newsDisabled}); } });
 
 /* ===== BUILD INFO ===== */
-async function loadBuildInfo(){ try{let r; if(typeof AndroidBridge!=="undefined"){r=JSON.parse(AndroidBridge.call("get_build_info","[]"));}else{ if(!api())return; r=await api().get_build_info(); } if(!r)return; $("buildInfo").textContent=r.version+" · "+r.date; $("sysinfoVersion").textContent=r.version; $("sysinfoDate").textContent=r.date; $("sysinfoPlatform").textContent=r.platform||"Android"; }catch(e){} }
+async function loadBuildInfo(){ try{let r; if(typeof AndroidBridge!=="undefined"){r=JSON.parse(AndroidBridge.call("get_build_info","[]"));}else{ if(!api())return; r=await api().get_build_info(); } if(!r)return; $("buildInfo").textContent=r.version+" · "+r.date; $("sysinfoVersion").textContent=r.version; $("sysinfoDate").textContent=r.date; $("sysinfoPlatform").textContent=r.platform||(IS_DESKTOP?"Desktop":"Android"); }catch(e){} }
 
 /* ===== SNOW ===== */
 var _snowCanvas=null,_snowCtx=null,_snowFlakes=[],_snowAnim=null,_snowOn=false;
@@ -1737,7 +1826,12 @@ window.__importResult = null;
 window.__importSubResult = null;
 window.__refreshSubResult = null;
 window.__connectResult = null;
-async function tryImportSub(){ if(_importingSub)return; const v=($("subInput").value||"").trim(); if(!v)return; if(!/^https?:\/\/.+/i.test(v)){showSubError(t("welcome_err_format"));return;} _importingSub=true;const btn=$("subNextBtn");btn.classList.add("loading");hideSubError(); try{AndroidBridge.call("import_subscription_async",JSON.stringify([v]));}catch(e){showSubError(t("err_generic")+e);btn.classList.remove("loading");_importingSub=false;} }
+async function tryImportSub(){ if(_importingSub)return; const v=($("subInput").value||"").trim(); if(!v)return; if(!/^https?:\/\/.+/i.test(v)){showSubError(t("welcome_err_format"));return;} _importingSub=true;const btn=$("subNextBtn");btn.classList.add("loading");hideSubError();
+  if(typeof AndroidBridge!=="undefined"){ try{AndroidBridge.call("import_subscription_async",JSON.stringify([v]));}catch(e){showSubError(t("err_generic")+e);btn.classList.remove("loading");_importingSub=false;} return; }
+  if(!api()){ showSubError(t("welcome_err_connect"));btn.classList.remove("loading");_importingSub=false; return; }
+  try{ const r=await api().import_subscription(v); __importResult(r); }
+  catch(e){ showSubError(t("err_generic")+e); btn.classList.remove("loading"); _importingSub=false; }
+}
 window.__importResult = function(r){
   const btn=$("subNextBtn");
   _importingSub=false;
@@ -1747,6 +1841,20 @@ window.__importResult = function(r){
     showSubError(msg);btn.classList.remove("loading");return;
   }
   STATE=r.state;
+  if(typeof AndroidBridge==="undefined"){
+    // Desktop: подключаемся сразу, без системного диалога VPN
+    const sv=STATE.servers[STATE.selected];
+    if(sv && api()){
+      api().connect(STATE.selected).then(cr=>{
+        if(cr&&cr.error){ btn.classList.remove("loading"); showSubError(cr.error==="need_admin"?t("need_admin"):(t("err_generic")+cr.error)); return; }
+        if(cr&&cr.state)STATE=cr.state;
+        __connectResult(cr||{});
+      }).catch(e=>{ btn.classList.remove("loading"); showSubError(t("err_generic")+e); });
+      return;
+    }
+    setTimeout(()=>{ _subReady=true;btn.disabled=false;btn.classList.remove("loading"); },500);
+    return;
+  }
   // Request VPN permission, then auto-connect via __vpnPermissionGranted
   try{AndroidBridge.call("request_vpn_permission","[]");}catch(e){showSubError(t("err_generic")+e);btn.classList.remove("loading");}
 };
@@ -1792,7 +1900,10 @@ async function initEnhanced(){
     const hasSub=STATE.settings&&STATE.settings.subscription_url;
     setInterval(async()=>{if(document.hidden)return;try{const st=typeof AndroidBridge!=="undefined"?JSON.parse(AndroidBridge.call("get_state","[]")):await api().get_state();const changed=st.tun_active!==STATE.tun_active||st.connected!==STATE.connected;STATE=st;CONFLICTS=STATE.conflicts||[];updateHome();if(changed&&st.connected){const sv=STATE.servers[STATE.selected];if(sv&&CONN_PHASE==="connecting")showConnected(sv);}}catch(e){}},3000);
     if(hasSub){
-      if(STATE.servers.length===0){window.__refreshSubResult=function(r){if(r&&r.state)STATE=r.state;};AndroidBridge.call("refresh_subscription","");}
+      if(STATE.servers.length===0){
+        if(typeof AndroidBridge!=="undefined"){ window.__refreshSubResult=function(r){if(r&&r.state)STATE=r.state;}; try{AndroidBridge.call("refresh_subscription","");}catch(e){} }
+        else if(api()){ api().refresh_subscription().then(r=>{ if(r&&r.state){STATE=r.state;renderServers();renderProfile();updateHome();} }).catch(()=>{}); }
+      }
       const intro=$("intro");if(intro)intro.remove();document.body.classList.remove("intro-active");showApp();
       if(!STATE.tutorial_done)setTimeout(()=>startTutorial(),600);
       try{checkNews();}catch(e){}

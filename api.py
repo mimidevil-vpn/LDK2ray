@@ -29,7 +29,7 @@ EMOJI_PERIOD = 3600           # секунд между сменами
 class Api:
     # Версия приложения — build скрипты подставляют реальную из git describe
     # Для dev-режима (из исходников) — git describe в runtime
-    BUILD_VERSION = "3.0.0"
+    BUILD_VERSION = "3.0.2"
     BUILD_DATE = "2026-08-03"
 
     def __init__(self):
@@ -169,6 +169,7 @@ class Api:
             "local_id": self.settings.get("local_id", ""),
             "rating": int(self.settings.get("rating", 0) or 0),
             "emoji": self.settings.get("emoji", ""),
+            "background_image": self.settings.get("background_image", ""),
             "conflicts": list(self._conflicts),
             "sub": self._sub_info(),
             "save_error": self._save_error,
@@ -530,6 +531,7 @@ class Api:
         for key, default in (("minimize_to_tray", True), ("start_minimized", False),
                              ("high_priority", False)):
             cur[key] = bool(patch.get(key, cur.get(key, default)))
+        cur["tun_mode"] = bool(patch.get("tun_mode", cur.get("tun_mode", False)))
         # ---- кастомизация ----
         cur["custom_bg"] = storage.validate_color(patch.get("custom_bg", cur.get("custom_bg", "")))
         cur["custom_text"] = storage.validate_color(patch.get("custom_text", cur.get("custom_text", "")))
@@ -733,6 +735,19 @@ class Api:
             "python": __import__("sys").version.split()[0],
             "platform": __import__("platform").platform(),
         }
+
+    def get_debug_log(self, max_lines=400):
+        """Последние строки app.log для кнопки «Copy debug log» на десктопе."""
+        import os
+        path = storage.LOG_FILE()
+        try:
+            if not path or not os.path.exists(path):
+                return {"log": ""}
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            return {"log": "".join(lines[-max_lines:])}
+        except Exception as e:
+            return {"log": "", "error": str(e)}
 
     # ------------------------------------------------------------ новости
     def get_news(self):
