@@ -1,19 +1,13 @@
 # -*- coding: utf-8 -*-
-"""LEDOKOL HUB — точка входа (pywebview) c поддержкой системного трея."""
+"""mimi crack — точка входа (pywebview) c поддержкой системного трея."""
 
 import os
 import sys
-import time
-import ctypes
 import threading
 
 import storage
 
-APP_TITLE = "LEDOKOL HUB"       # заголовок окна; по нему же ищем уже запущенный экземпляр
-MUTEX_NAME = "LedokolHubSingleInstance"
-RELAUNCH_FLAG = "--relaunch"    # передаём при перезапуске с правами администратора
-
-_keep_alive = []                # ссылки на объекты, которые нельзя дать собрать GC
+APP_TITLE = "mimi crack"
 
 # Профиль движка WebView2 держим в папке данных. По умолчанию он создаётся рядом
 # с exe — а если приложение установлено в Program Files, туда писать нельзя, и
@@ -48,87 +42,10 @@ try:
 except Exception:
     _HAS_TRAY = False
 
-IS_WIN = os.name == "nt"
-
 
 def resource(rel):
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, rel)
-
-
-# ----------------------------------------------------------- один экземпляр
-def find_window(title: str) -> int:
-    """HWND окна с таким заголовком, включая спрятанное в трей.
-
-    Через EnumWindows, а не FindWindowW: последняя на окне pywebview
-    стабильно возвращает 0, хотя окно существует.
-    """
-    user32 = ctypes.windll.user32
-    proc_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
-    found = []
-    buf = ctypes.create_unicode_buffer(512)
-
-    def callback(hwnd, _lparam):
-        user32.GetWindowTextW(hwnd, buf, 512)
-        if buf.value == title:
-            found.append(hwnd)
-            return False        # нашли — дальше не идём
-        return True
-
-    try:
-        user32.EnumWindows(proc_type(callback), None)
-    except Exception:
-        return 0
-    return found[0] if found else 0
-
-
-def claim_single_instance() -> bool:
-    """False — приложение уже запущено (мы показали его окно и уходим).
-
-    Без этой защиты второй экземпляр читал файлы при старте, а потом затирал
-    их своим устаревшим состоянием — отсюда и «настройки не сохраняются».
-
-    Отдельный случай — перезапуск с правами администратора: старый процесс ещё
-    держит мьютекс, пока новый уже стартовал. Тогда мы не выходим сразу, а ждём
-    несколько секунд, пока он освободится. Иначе оба процесса завершались и
-    приложение просто не открывалось.
-    """
-    if not IS_WIN:
-        return True
-
-    waiting = RELAUNCH_FLAG in sys.argv
-    deadline = time.time() + (20.0 if waiting else 0.0)
-    kernel32 = ctypes.windll.kernel32
-
-    while True:
-        try:
-            handle = kernel32.CreateMutexW(None, False, MUTEX_NAME)
-            if kernel32.GetLastError() != 183:      # ERROR_ALREADY_EXISTS
-                _keep_alive.append(handle)          # держим до конца работы
-                return True
-            kernel32.CloseHandle(handle)
-        except Exception:
-            return True
-
-        if time.time() >= deadline:
-            break
-        time.sleep(0.4)
-
-    if waiting:
-        # старый процесс так и не ушёл — показываем его окно, чтобы человек
-        # не остался вообще без приложения
-        storage.log("[start] перезапуск: прошлый экземпляр не завершился за 20 с")
-
-    try:
-        hwnd = find_window(APP_TITLE)
-        if hwnd:
-            user32 = ctypes.windll.user32
-            user32.ShowWindow(hwnd, 5)          # SW_SHOW
-            user32.ShowWindow(hwnd, 9)          # SW_RESTORE
-            user32.SetForegroundWindow(hwnd)
-    except Exception:
-        pass
-    return False
 
 
 def human_speed(bps: int) -> str:
@@ -143,9 +60,6 @@ def human_speed(bps: int) -> str:
 
 
 def main():
-    if not claim_single_instance():
-        return
-
     with open(resource(os.path.join("ui", "index.html")), "r", encoding="utf-8") as f:
         html = f.read()
 
@@ -242,7 +156,7 @@ def main():
                 pystray.MenuItem(f"Открыть {APP_TITLE}", act_show, default=True),
                 pystray.MenuItem("Выход", lambda icon, item: do_quit()),
             )
-            icon = pystray.Icon(APP_TITLE, img, f"{APP_TITLE} · Ledokol VPN", menu)
+            icon = pystray.Icon(APP_TITLE, img, APP_TITLE, menu)
             state["tray"] = icon
             try:
                 icon.run()

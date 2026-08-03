@@ -32,3 +32,6 @@ app.log
 .idea/
 Thumbs.db
 desktop.ini
+
+# --- Android-клиент (отдельный репозиторий: mimidevil-vpn/LEDOKOL-HUB) ---
+android/

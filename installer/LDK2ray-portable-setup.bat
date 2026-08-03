@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM   LDK2ray — установщик без сторонних программ
+REM   mimi crack — установщик без сторонних программ
 REM   Ставит приложение для текущего пользователя (без прав админа),
 REM   создаёт ярлыки на рабочем столе и в меню Пуск.
 REM   Файлы (LDK2ray.exe, xray.exe, geoip.dat, geosite.dat, wintun.dll)
@@ -8,7 +8,7 @@ REM   должны лежать РЯДОМ с этим файлом или в ..
 REM ============================================================
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-title Установка LDK2ray
+title Установка mimi crack
 
 REM --- где лежит полезная нагрузка ---
 set "SRC="
@@ -21,9 +21,9 @@ if not defined SRC (
     pause & exit /b 1
 )
 
-set "DEST=%LOCALAPPDATA%\Programs\LDK2ray"
+set "DEST=%LOCALAPPDATA%\Programs\mimi crack"
 echo(
-echo   Установка LDK2ray в:
+echo   Установка mimi crack в:
 echo   %DEST%
 echo(
 
@@ -44,13 +44,13 @@ if exist "%SRC%_internal" (
 echo(
 echo   Создаю ярлыки...
 set "PS=powershell -NoProfile -ExecutionPolicy Bypass -Command"
-%PS% "$w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut([IO.Path]::Combine([Environment]::GetFolderPath('Desktop'),'LDK2ray.lnk')); $s.TargetPath='%DEST%\LDK2ray.exe'; $s.WorkingDirectory='%DEST%'; $s.Save()"
-%PS% "$m=[IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'LDK2ray'); New-Item -ItemType Directory -Force -Path $m ^| Out-Null; $w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut([IO.Path]::Combine($m,'LDK2ray.lnk')); $s.TargetPath='%DEST%\LDK2ray.exe'; $s.WorkingDirectory='%DEST%'; $s.Save()"
+%PS% "$w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut([IO.Path]::Combine([Environment]::GetFolderPath('Desktop'),'mimi crack.lnk')); $s.TargetPath='%DEST%\LDK2ray.exe'; $s.WorkingDirectory='%DEST%'; $s.Save()"
+%PS% "$m=[IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'mimi crack'); New-Item -ItemType Directory -Force -Path $m ^| Out-Null; $w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut([IO.Path]::Combine($m,'mimi crack.lnk')); $s.TargetPath='%DEST%\LDK2ray.exe'; $s.WorkingDirectory='%DEST%'; $s.Save()"
 
 echo(
-echo   Готово! Ярлык «LDK2ray» на рабочем столе и в меню Пуск.
+echo   Готово! Ярлык «mimi crack» на рабочем столе и в меню Пуск.
 echo(
-choice /c YN /n /m "Запустить LDK2ray сейчас? [Y/N] "
+choice /c YN /n /m "Запустить mimi crack сейчас? [Y/N] "
 if errorlevel 2 goto :end
 start "" "%DEST%\LDK2ray.exe"
 :end

@@ -30,7 +30,7 @@ class Api:
     # Версия приложения — build скрипты подставляют реальную из git describe
     # Для dev-режима (из исходников) — git describe в runtime
     BUILD_VERSION = "3.0.0"
-    BUILD_DATE = "2026-07-28"
+    BUILD_DATE = "2026-08-03"
 
     def __init__(self):
         self._window = None
@@ -201,10 +201,6 @@ class Api:
         url = storage.validate_url((url or "").strip())
         if not url:
             return {"error": "empty_url"}
-        from urllib.parse import urlparse
-        host = urlparse(url).hostname or ""
-        if host != "sub.ledokol.shop":
-            return {"error": "wrong_domain"}
         try:
             content, info = fetch_subscription(url)
             parsed = parse_subscription(content)

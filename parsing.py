@@ -153,6 +153,43 @@ def _parse_ss(link: str) -> Server:
     return s
 
 
+def _parse_ssr(link: str) -> Server:
+    """ShadowsocksR: ssr://base64url(server:port:protocol:method:obfs:pass64/?params)."""
+    body = link[len("ssr://"):]
+    try:
+        dec = _b64decode(body).decode("utf-8", "ignore")
+    except Exception:
+        return None
+    base, _, params = dec.partition("/?")
+    parts = base.split(":")
+    if len(parts) < 6:
+        return None
+    server, port, _protocol, method, _obfs = parts[0], parts[1], parts[2], parts[3], parts[4]
+    password_b64 = parts[5]
+    try:
+        password = _b64decode(password_b64).decode("utf-8", "ignore")
+    except Exception:
+        password = password_b64
+    s = Server(protocol="shadowsocks", raw=link)
+    s.address = server
+    try:
+        s.port = int(port)
+    except Exception:
+        s.port = 8388
+    s.method = method
+    s.password = password
+    q = parse_qs(params)
+    name = _one(q, "remarks")
+    if name:
+        try:
+            s.name = _b64decode(name).decode("utf-8", "ignore")
+        except Exception:
+            s.name = name
+    else:
+        s.name = server
+    return s
+
+
 def parse_link(link: str):
     link = (link or "").strip()
     try:
@@ -164,9 +201,109 @@ def parse_link(link: str):
             return _parse_trojan(link)
         if link.startswith("ss://"):
             return _parse_ss(link)
+        if link.startswith("ssr://"):
+            return _parse_ssr(link)
     except Exception:
         return None
     return None
+
+
+def _strip_quotes(v: str) -> str:
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+        return v[1:-1]
+    return v
+
+
+def _clash_entry_to_server(e: dict) -> Server:
+    """Одна запись «- name: ...» из Clash YAML в структуру Server."""
+    typ = (e.get("type") or "").lower()
+    srv = Server()
+    srv.name = e.get("name") or e.get("server") or "Server"
+    srv.address = e.get("server") or ""
+    try:
+        srv.port = int(e.get("port") or 443)
+    except Exception:
+        srv.port = 443
+    srv.network = e.get("network") or "tcp"
+    srv.fingerprint = e.get("client-fingerprint") or ""
+    srv.flow = e.get("flow") or ""
+    srv.sni = e.get("servername") or e.get("sni") or ""
+    srv.public_key = e.get("reality-opts.public-key") or ""
+    srv.short_id = e.get("reality-opts.short-id") or ""
+    srv.host = (e.get("ws-opts.headers.Host") or e.get("http-opts.headers.Host")
+                or e.get("grpc-opts.headers.Host") or e.get("h2-opts.headers.Host") or "")
+    srv.path = (e.get("ws-opts.path") or e.get("http-opts.path")
+                or e.get("grpc-opts.grpc-service-name") or e.get("h2-opts.path") or "")
+    if e.get("reality-opts.public-key") or e.get("reality-opts") is not None:
+        srv.security = "reality"
+    elif e.get("tls") in ("true", "True", "1", "yes"):
+        srv.security = "tls"
+    if typ == "vless":
+        srv.protocol = "vless"
+        srv.uuid = e.get("uuid") or ""
+    elif typ == "vmess":
+        srv.protocol = "vmess"
+        srv.uuid = e.get("uuid") or ""
+        try:
+            srv.alter_id = int(e.get("alterId") or 0)
+        except Exception:
+            srv.alter_id = 0
+    elif typ == "trojan":
+        srv.protocol = "trojan"
+        srv.password = e.get("password") or ""
+    elif typ == "ss":
+        srv.protocol = "shadowsocks"
+        srv.password = e.get("password") or ""
+        srv.method = e.get("cipher") or "aes-256-gcm"
+    else:
+        return None
+    return srv
+
+
+def _parse_clash(content: str) -> list:
+    """Минимальный парсер Clash YAML: только секция proxies (список «- name:»)."""
+    entries = []
+    cur = None
+    prefix_stack = []
+    for raw in (content or "").splitlines():
+        line = raw.replace("\t", "    ").rstrip()
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        text = line.strip()
+        if text.startswith("- "):
+            if cur:
+                entries.append(cur)
+            cur = {}
+            prefix_stack = [(indent, "")]
+            text = text[2:].strip()
+        elif cur is None:
+            continue
+        else:
+            while prefix_stack and indent <= prefix_stack[-1][0]:
+                prefix_stack.pop()
+        if not text or ":" not in text:
+            continue
+        key, _, value = text.partition(":")
+        key = key.strip()
+        value = _strip_quotes(value.strip())
+        if not value:
+            if key.endswith(":"):
+                key = key[:-1]
+            prefix_stack.append((indent, key + "."))
+            continue
+        pfx = prefix_stack[-1][1] if prefix_stack else ""
+        cur[pfx + key] = value
+    if cur:
+        entries.append(cur)
+    out = []
+    for e in entries:
+        srv = _clash_entry_to_server(e)
+        if srv:
+            srv.raw = "clash:" + (e.get("name") or srv.name)
+            out.append(srv)
+    return out
 
 
 def parse_many(text: str) -> list:
@@ -182,16 +319,43 @@ def parse_many(text: str) -> list:
 
 
 def parse_subscription(content: str) -> list:
-    """Подписка бывает base64 всего списка либо plain-текст."""
+    """Разбирает подписку в любом виде: Clash YAML, base64 всего списка,
+    base64 построчно или plain-текст с прямыми ссылками."""
     content = (content or "").strip()
-    text = content
+    if not content:
+        return []
+
+    low = content.lower()
+    if "proxies:" in low and ("- name:" in low or "- type:" in low):
+        clash = _parse_clash(content)
+        if clash:
+            return clash
+
+    servers = parse_many(content)
+    if servers:
+        return servers
+
     try:
         dec = _b64decode(content).decode("utf-8", "ignore")
         if "://" in dec:
-            text = dec
+            servers = parse_many(dec)
+            if servers:
+                return servers
     except Exception:
         pass
-    return parse_many(text)
+
+    out = []
+    for line in content.replace("\r", "\n").split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            dec = _b64decode(line).decode("utf-8", "ignore")
+            if "://" in dec:
+                out.extend(parse_many(dec))
+        except Exception:
+            continue
+    return out
 
 
 def parse_userinfo(header: str) -> dict:

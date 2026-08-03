@@ -1,10 +1,10 @@
 ; ============================================================
-;  LDK2ray — установщик (Inno Setup 6)
+;  mimi crack — установщик (Inno Setup 6)
 ;  Ставится для текущего пользователя, БЕЗ прав администратора.
 ;  Собрать: installer\build_installer.bat  ->  installer\Output\LDK2ray-Setup.exe
 ; ============================================================
 
-#define MyAppName      "LEDOKOL HUB"
+#define MyAppName      "mimi crack"
 #define MyAppVersion   "3.0.0"
 #define MyAppPublisher "mimidevil"
 #define MyAppURL       "https://t.me/mimidevil"
